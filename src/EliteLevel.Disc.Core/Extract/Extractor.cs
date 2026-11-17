@@ -34,7 +34,7 @@ public sealed class Extractor : IExtractor
         foreach (var node in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (node.IsProtected && !options.IncludeProtected)
+            if (NodeWalk.IsProtectedFile(node) && !options.IncludeProtected)
             {
                 protectedSkipped++;
                 continue;
@@ -102,13 +102,10 @@ public sealed class Extractor : IExtractor
             return;
         }
 
-        // Walk hidden system folders too, so the default policy can count them as skipped.
-        foreach (var child in NodeWalk.Walk(concrete, includeSystem: true))
+        // Same file set info counts as protected: hidden system-update files included.
+        foreach (var child in NodeWalk.FilesIncludingSystem(concrete))
         {
-            if (!child.IsDirectory)
-            {
-                files.Add(child);
-            }
+            files.Add(child);
         }
     }
 

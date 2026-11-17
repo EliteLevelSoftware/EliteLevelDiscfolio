@@ -25,7 +25,12 @@ public class CliTests
             Assert.Equal("NORTHWIND", doc.RootElement.GetProperty("volumeLabel").GetString());
             Assert.Equal("PlayStation 3", doc.RootElement.GetProperty("platform").GetString());
             Assert.Equal(2, doc.RootElement.GetProperty("files").GetInt32());
+            Assert.Equal(0, doc.RootElement.GetProperty("protected").GetInt32());
         }
+
+        var plainInfo = await Run("info", iso);
+        Assert.Equal(0, plainInfo.Code);
+        Assert.DoesNotContain("protected system entries", plainInfo.Stdout);
 
         var list = await Run("list", iso, "--path", "/PS3_GAME", "--json", "--long");
         Assert.Equal(0, list.Code);
@@ -83,9 +88,145 @@ public class CliTests
         var bad = await Run("info", garbage);
         Assert.Equal(2, bad.Code);
         Assert.Contains("does not look like a supported disc image", bad.Stderr);
+        Assert.Contains("ISO 9660/Joliet (including PS3)", bad.Stderr);
+        Assert.Contains("Xbox and Xbox 360 XDVDFS", bad.Stderr);
+        Assert.Contains("folder dumps", bad.Stderr);
+        Assert.DoesNotContain("NSP", bad.Stderr);
+        Assert.DoesNotContain("XCI", bad.Stderr);
+        Assert.Equal(string.Empty, bad.Stdout);
 
         var usage = await Run("extract", iso);
         Assert.Equal(1, usage.Code);
+        Assert.Contains("Extract needs --out.", usage.Stderr);
+    }
+
+    [Fact]
+    public async Task Json_errors_keep_the_exit_code()
+    {
+        using var temp = new TempDir();
+        var iso = Path.Combine(temp.Path, "game.iso");
+        var builder = new CDBuilder { UseJoliet = true, VolumeIdentifier = "NORTHWIND" };
+        builder.AddFile("readme.txt", Encoding.ASCII.GetBytes("hello"));
+        builder.Build(iso);
+
+        var garbage = Path.Combine(temp.Path, "garbage.bin");
+        await File.WriteAllBytesAsync(garbage, new byte[4096]);
+        var text = await Run("info", garbage);
+        var unsupported = await Run("info", garbage, "--json");
+        Assert.Equal(2, unsupported.Code);
+        Assert.Equal(string.Empty, unsupported.Stderr);
+        using (var doc = JsonDocument.Parse(unsupported.Stdout))
+        {
+            var error = doc.RootElement.GetProperty("error");
+            Assert.Equal(2, error.GetProperty("code").GetInt32());
+            Assert.Equal("unsupported", error.GetProperty("kind").GetString());
+            Assert.Equal(text.Stderr.Trim(), error.GetProperty("message").GetString());
+            Assert.Contains("ISO 9660/Joliet (including PS3)", error.GetProperty("message").GetString());
+            Assert.DoesNotContain("NSP", error.GetProperty("message").GetString());
+        }
+
+        var nsp = Path.Combine(temp.Path, "game.nsp");
+        await File.WriteAllBytesAsync(nsp, "PFS0"u8.ToArray().Concat(new byte[24]).ToArray());
+        var switchImage = await Run("detect", nsp, "--json");
+        Assert.Equal(2, switchImage.Code);
+        Assert.Equal(string.Empty, switchImage.Stderr);
+        using (var doc = JsonDocument.Parse(switchImage.Stdout))
+        {
+            var error = doc.RootElement.GetProperty("error");
+            Assert.Equal(2, error.GetProperty("code").GetInt32());
+            Assert.Equal("unsupported", error.GetProperty("kind").GetString());
+            Assert.Equal(DiscFormatException.SwitchUnsupported, error.GetProperty("message").GetString());
+            Assert.Contains("aren't supported yet", error.GetProperty("message").GetString());
+        }
+
+        var switchText = await Run("info", nsp);
+        Assert.Equal(2, switchText.Code);
+        Assert.Equal(DiscFormatException.SwitchUnsupported, switchText.Stderr.Trim());
+        Assert.Equal(string.Empty, switchText.Stdout);
+
+        var missing = await Run("info", Path.Combine(temp.Path, "missing.iso"), "--json");
+        Assert.Equal(1, missing.Code);
+        Assert.Equal(string.Empty, missing.Stderr);
+        using (var doc = JsonDocument.Parse(missing.Stdout))
+        {
+            var error = doc.RootElement.GetProperty("error");
+            Assert.Equal(1, error.GetProperty("code").GetInt32());
+            Assert.Equal("user", error.GetProperty("kind").GetString());
+            Assert.False(string.IsNullOrWhiteSpace(error.GetProperty("message").GetString()));
+        }
+
+        var usage = await Run("extract", iso, "--json");
+        Assert.Equal(1, usage.Code);
+        using (var doc = JsonDocument.Parse(usage.Stdout))
+        {
+            var error = doc.RootElement.GetProperty("error");
+            Assert.Equal(1, error.GetProperty("code").GetInt32());
+            Assert.Equal("user", error.GetProperty("kind").GetString());
+            Assert.Equal("Extract needs --out.", error.GetProperty("message").GetString());
+        }
+
+        var algo = await Run("hash", iso, "--algo", "crc32", "--json");
+        Assert.Equal(1, algo.Code);
+        using (var doc = JsonDocument.Parse(algo.Stdout))
+        {
+            Assert.Equal("user", doc.RootElement.GetProperty("error").GetProperty("kind").GetString());
+            Assert.Contains("--algo", doc.RootElement.GetProperty("error").GetProperty("message").GetString());
+        }
+
+        var parsed = await Run("info", "--json");
+        Assert.Equal(1, parsed.Code);
+        Assert.Equal(string.Empty, parsed.Stderr);
+        using (var doc = JsonDocument.Parse(parsed.Stdout))
+        {
+            var error = doc.RootElement.GetProperty("error");
+            Assert.Equal(1, error.GetProperty("code").GetInt32());
+            Assert.Equal("user", error.GetProperty("kind").GetString());
+            Assert.False(string.IsNullOrWhiteSpace(error.GetProperty("message").GetString()));
+        }
+    }
+
+    [Fact]
+    public async Task Info_and_extract_share_the_protected_system_count()
+    {
+        using var temp = new TempDir();
+        var partition = XdvdfsBuilder.BuildPartition(
+        [
+            ("default.xex", Encoding.ASCII.GetBytes("xex")),
+            ("media/ICON.PNG", Encoding.ASCII.GetBytes("png")),
+            ("$SystemUpdate/a.bin", Encoding.ASCII.GetBytes("a")),
+            ("$SystemUpdate/nested/b.bin", Encoding.ASCII.GetBytes("b"))
+        ]);
+        var image = XdvdfsBuilder.WriteImage(temp.Path, "game.iso", partition, 0);
+
+        var info = await Run("info", image);
+        Assert.Equal(0, info.Code);
+        Assert.Contains("2 files, plus 2 protected system entries skipped on extract", info.Stdout);
+
+        var infoJson = await Run("info", image, "--json");
+        Assert.Equal(0, infoJson.Code);
+        using (var doc = JsonDocument.Parse(infoJson.Stdout))
+        {
+            Assert.Equal(2, doc.RootElement.GetProperty("files").GetInt32());
+            Assert.Equal(2, doc.RootElement.GetProperty("protected").GetInt32());
+        }
+
+        var shown = await Run("info", image, "--show-system");
+        Assert.Contains("4 files, plus 2 protected system entries skipped on extract", shown.Stdout);
+
+        var dest = Path.Combine(temp.Path, "out");
+        var extract = await Run("extract", image, "--out", dest);
+        Assert.Equal(0, extract.Code);
+        Assert.Contains("Extracted 2, skipped 0, protected 2", extract.Stdout);
+        Assert.True(File.Exists(Path.Combine(dest, "default.xex")));
+        Assert.False(File.Exists(Path.Combine(dest, "$SystemUpdate", "a.bin")));
+
+        var extractJson = await Run("extract", image, "--out", Path.Combine(temp.Path, "out-json"), "--json");
+        Assert.Equal(0, extractJson.Code);
+        using (var doc = JsonDocument.Parse(extractJson.Stdout))
+        {
+            Assert.Equal(2, doc.RootElement.GetProperty("extracted").GetInt32());
+            Assert.Equal(2, doc.RootElement.GetProperty("protected").GetInt32());
+        }
     }
 
     [Fact]

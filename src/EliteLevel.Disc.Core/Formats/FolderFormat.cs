@@ -6,6 +6,7 @@ public sealed class FolderFormat : IImageFormat
 {
     public string Id => "folder";
     public string DisplayName => "Folder dump";
+    public string SupportPhrase => "folder dumps";
 
     public bool CanOpen(Stream probe, ImageHints hints) => false;
 
@@ -37,6 +38,7 @@ public sealed class FolderFormat : IImageFormat
             stats.Files,
             stats.Directories,
             stats.Bytes,
+            stats.ProtectedFiles,
             rootInfo.Name);
         return Task.FromResult<IDiscImage>(new FolderImage(identity, root));
     }

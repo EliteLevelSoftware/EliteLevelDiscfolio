@@ -22,7 +22,32 @@ dotnet run --project src/EliteLevel.Disc.Cli -- hash game.iso --manifest game.sh
 dotnet run --project src/EliteLevel.Disc.Cli -- search game.iso ICON0
 ```
 
-Exit codes: `0` success, `1` usage or other user error, `2` unsupported or unreadable image. Exit code `3` is reserved for a later release that needs keys.
+Exit codes:
+
+| Code | `kind` with `--json` | Meaning |
+|---|---|---|
+| 0 | none | Success |
+| 1 | `user` | Usage or another user error |
+| 2 | `unsupported` | The file is not a format this version can read |
+| 3 | `needs-keys` | Reserved. This version does not return it |
+
+`--json` prints indented JSON on standard output. Success output is the command's result. A failure is one error object, and the exit code is the same as the text mode:
+
+```json
+{
+  "error": {
+    "code": 2,
+    "kind": "unsupported",
+    "message": "This file is a Nintendo Switch image (NSP or XCI). Switch images aren't supported yet."
+  }
+}
+```
+
+Without `--json`, the same message is written to standard error.
+
+`info` prints the visible file count. If the default extract will skip protected paths, the files line also names that count, for example `22 files, plus 150 protected system entries skipped on extract`. With `--json`, `files` is the visible count and `protected` is the skipped count. `extract` reports that same protected count for a full extract: it includes `EBOOT.BIN`, `PS3_UPDATE`, `LICDIR`, and files under `$SystemUpdate`, including when that folder is hidden from the listing. `--show-system` lists the folder and does not change the protected count. `--include-protected` copies those bytes unchanged and reports protected 0 for that run.
+
+An unrecognized file names only the readers this version has: ISO 9660/Joliet (including PS3), Xbox and Xbox 360 XDVDFS, and folder dumps. NSP and XCI files are a different message: Switch images are not supported yet. Both still exit 2.
 
 ## Tests
 

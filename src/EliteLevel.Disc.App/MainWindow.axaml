@@ -345,11 +345,11 @@
               <StackPanel Spacing="12" MaxWidth="680">
                 <controls:ProductMark Width="64" Height="64" HorizontalAlignment="Left"/>
                 <TextBlock Text="EliteLevel Discfolio" FontSize="22" FontWeight="Bold"/>
-                <TextBlock Text="Version 0.1.0" Classes="mono" Foreground="{StaticResource ElTextMutedBrush}"/>
+                <TextBlock Text="Version 0.1.1" Classes="mono" Foreground="{StaticResource ElTextMutedBrush}"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
                            Text="Discfolio browses disc images and folder dumps you already have. It is read-only: the source is never modified. It does not include encryption keys or game data. Use it only with copies you are allowed to possess."/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
-                           Text="Open an ISO 9660 or Joliet image, an Xbox or Xbox 360 XDVDFS image, or a folder. Search by name, copy a SHA-256 hash, and extract files to a folder you choose. Protected paths are skipped unless you include them, and even then they are copied unchanged."/>
+                           Text="Open an ISO 9660 or Joliet image, an Xbox or Xbox 360 XDVDFS image, or a folder. Nintendo Switch images are not supported yet. Search by name, copy a SHA-256 hash, and extract files to a folder you choose. Protected paths, including a hidden system-update folder, are skipped unless you include them, and even then they are copied unchanged."/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElTextMutedBrush}"
                            Text="PlayStation, Xbox and Nintendo are trademarks of their owners. Elite Level Software is not affiliated with them."/>
                 <TextBlock Text="A product of Elite Level" Foreground="{StaticResource ElTextMutedBrush}"/>

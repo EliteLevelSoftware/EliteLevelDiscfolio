@@ -37,6 +37,7 @@ public sealed class XdvdfsFormat : IImageFormat
 
     public string Id => "xdvdfs";
     public string DisplayName => "XDVDFS";
+    public string SupportPhrase => "Xbox and Xbox 360 XDVDFS";
 
     public bool CanOpen(Stream probe, ImageHints hints)
     {
@@ -198,6 +199,7 @@ internal sealed class XdvdfsVolume : IDiscImage
             stats.Files,
             stats.Directories,
             stats.Bytes,
+            stats.ProtectedFiles,
             "image");
         return new XdvdfsVolume(source, identity, root);
     }

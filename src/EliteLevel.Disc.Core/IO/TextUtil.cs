@@ -38,6 +38,20 @@ public static class TextFormat
     }
 
     public static string Count(long value) => value.ToString("N0", CultureInfo.CurrentCulture);
+
+    /// <summary>
+    /// Visible file count, and when extract would skip files, the protected total that uses the same definition.
+    /// </summary>
+    public static string FileSummary(long files, long protectedEntries)
+    {
+        var count = Count(files);
+        if (protectedEntries <= 0)
+        {
+            return count;
+        }
+
+        return count + " files, plus " + Count(protectedEntries) + " protected system entries skipped on extract";
+    }
 }
 
 public static class Glob

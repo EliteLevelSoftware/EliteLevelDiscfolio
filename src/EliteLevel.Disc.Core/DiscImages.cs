@@ -1,5 +1,8 @@
+using System.Runtime.CompilerServices;
 using EliteLevel.Disc.Core.Formats;
 using EliteLevel.Disc.Core.Formats.Xdvdfs;
+
+[assembly: InternalsVisibleTo("EliteLevel.Disc.Core.Tests")]
 
 namespace EliteLevel.Disc.Core;
 
@@ -9,6 +12,22 @@ public static class DiscImages
     private static readonly IImageFormat[] Formats = [new XdvdfsFormat(), new Iso9660Format()];
 
     public static IReadOnlyList<IImageFormat> RegisteredFormats => Formats;
+
+    /// <summary>Shown when a file is not a registered reader and not a known unsupported container.</summary>
+    internal static string UnsupportedFileMessage => DescribeUnsupportedFile(Formats.Append(new FolderFormat()));
+
+    /// <summary>Builds the unsupported-file message from the readers that were passed in.</summary>
+    internal static string DescribeUnsupportedFile(IEnumerable<IImageFormat> readers)
+    {
+        var phrases = readers
+            .Where(reader => !string.IsNullOrWhiteSpace(reader.SupportPhrase))
+            .OrderBy(reader => SupportOrder(reader.Id))
+            .ThenBy(reader => reader.Id, StringComparer.Ordinal)
+            .Select(reader => reader.SupportPhrase)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        return "This file does not look like a supported disc image. Check that it is " + JoinPhrases(phrases) + ".";
+    }
 
     public static Task<IDiscImage> OpenAsync(string path, OpenOptions? options = null, CancellationToken cancellationToken = default)
     {
@@ -60,7 +79,12 @@ public static class DiscImages
                 return new NamedImage(image, displayName);
             }
 
-            throw new DiscFormatException(DiscFormatException.Unrecognized);
+            if (UnsupportedSwitch.Matches(stream, displayName))
+            {
+                throw new DiscFormatException(DiscFormatException.SwitchUnsupported);
+            }
+
+            throw new DiscFormatException(UnsupportedFileMessage);
         }
         catch
         {
@@ -83,5 +107,24 @@ public static class DiscImages
         public ImageIdentity Identity { get; }
         public IDiscNode Root => _inner.Root;
         public ValueTask DisposeAsync() => _inner.DisposeAsync();
+    }
+
+    private static int SupportOrder(string id) => id switch
+    {
+        "iso9660" => 0,
+        "xdvdfs" => 1,
+        "folder" => 2,
+        _ => 10
+    };
+
+    private static string JoinPhrases(IReadOnlyList<string> phrases)
+    {
+        return phrases.Count switch
+        {
+            0 => "a supported disc image",
+            1 => phrases[0],
+            2 => phrases[0] + " or " + phrases[1],
+            _ => string.Join(", ", phrases.Take(phrases.Count - 1)) + ", or " + phrases[^1]
+        };
     }
 }

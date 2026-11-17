@@ -12,6 +12,7 @@ namespace EliteLevel.Disc.Cli;
 public static class CliHost
 {
     private static readonly SemaphoreSlim Gate = new(1, 1);
+    private static readonly AsyncLocal<bool> JsonOutput = new();
     private static readonly JsonSerializerOptions Json = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -24,14 +25,24 @@ public static class CliHost
         await Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         var previousOut = Console.Out;
         var previousError = Console.Error;
+        var previousJson = JsonOutput.Value;
         Console.SetOut(stdout);
         Console.SetError(stderr);
+        JsonOutput.Value = HasJsonFlag(args);
         try
         {
-            return await Build().Parse(args).InvokeAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            var parsed = Build().Parse(args);
+            if (JsonOutput.Value && parsed.Errors.Count > 0)
+            {
+                var message = string.Join(Environment.NewLine, parsed.Errors.Select(error => error.Message));
+                return WriteError(1, "user", message);
+            }
+
+            return await parsed.InvokeAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         finally
         {
+            JsonOutput.Value = previousJson;
             Console.SetOut(previousOut);
             Console.SetError(previousError);
             Gate.Release();
@@ -163,6 +174,7 @@ public static class CliHost
                     videoPartition = id.VideoPartition,
                     partitions = id.Partitions,
                     files = id.FileCount,
+                    @protected = id.ProtectedCount,
                     directories = id.DirectoryCount,
                     bytes = id.TotalBytes,
                     source = id.SourceName
@@ -174,7 +186,7 @@ public static class CliHost
                 Line("Format", id.FormatDisplayName);
                 Line("Platform", id.Platform ?? "Unknown");
                 Line("Layout", id.Layout ?? "Single partition");
-                Line("Files", TextFormat.Count(id.FileCount));
+                Line("Files", TextFormat.FileSummary(id.FileCount, id.ProtectedCount));
                 Line("Directories", TextFormat.Count(id.DirectoryCount));
                 Line("Size", ByteSize.Format(id.TotalBytes));
                 Line("Source", id.SourceName);
@@ -191,8 +203,7 @@ public static class CliHost
             var node = Resolve(disc.Root, path);
             if (!node.IsDirectory)
             {
-                Console.Error.WriteLine("The path is a file. Pass the directory that contains it.");
-                return 1;
+                return WriteError(1, "user", "The path is a file. Pass the directory that contains it.");
             }
 
             if (json)
@@ -249,8 +260,7 @@ public static class CliHost
     {
         if (string.IsNullOrWhiteSpace(output))
         {
-            Console.Error.WriteLine("Extract needs --out.");
-            return 1;
+            return WriteError(1, "user", "Extract needs --out.");
         }
 
         return await WithImageAsync(image, showSystem, async (disc, _) =>
@@ -300,8 +310,7 @@ public static class CliHost
     {
         if (!TryParseAlgos(algo, out var kinds))
         {
-            Console.Error.WriteLine("Unknown hash in --algo. Use sha256, sha1, md5.");
-            return 1;
+            return WriteError(1, "user", "Unknown hash in --algo. Use sha256, sha1, md5.");
         }
 
         return await WithImageAsync(image, showSystem, async (disc, _) =>
@@ -430,28 +439,61 @@ public static class CliHost
         }
         catch (FileNotFoundException ex)
         {
-            Console.Error.WriteLine(ex.Message);
-            return 1;
+            return WriteError(1, "user", ex.Message);
         }
         catch (DirectoryNotFoundException ex)
         {
-            Console.Error.WriteLine(ex.Message);
-            return 1;
+            return WriteError(1, "user", ex.Message);
         }
         catch (DiscFormatException ex)
         {
-            Console.Error.WriteLine(ex.Message);
-            return 2;
+            return WriteError(2, "unsupported", ex.Message);
         }
         catch (OperationCanceledException)
         {
-            return 1;
+            return WriteError(1, "user", "Cancelled.");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         {
-            Console.Error.WriteLine(ex.Message);
-            return 1;
+            return WriteError(1, "user", ex.Message);
         }
+    }
+
+    private static bool HasJsonFlag(string[] args)
+    {
+        foreach (var arg in args)
+        {
+            if (arg.Equals("--json", StringComparison.OrdinalIgnoreCase)
+                || arg.StartsWith("--json=", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Exit codes: 0 success, 1 user, 2 unsupported, 3 reserved for needs-keys.</summary>
+    private static int WriteError(int code, string kind, string message)
+    {
+        if (JsonOutput.Value)
+        {
+            WriteJson(new
+            {
+                error = new
+                {
+                    code,
+                    kind,
+                    message
+                }
+            });
+        }
+        else if (!string.IsNullOrEmpty(message))
+        {
+            Console.Error.WriteLine(message);
+        }
+
+        return code;
     }
 
     private static IDiscNode Resolve(IDiscNode root, string? path)

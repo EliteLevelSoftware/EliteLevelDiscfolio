@@ -100,7 +100,22 @@ internal static class NodeWalk
         }
     }
 
-    public static (long Files, long Directories, long Bytes) Measure(DiscNode root)
+    /// <summary>A file the default extract skips. The same test is used by info's protected count.</summary>
+    public static bool IsProtectedFile(IDiscNode node) => !node.IsDirectory && node.IsProtected;
+
+    /// <summary>Every file extract will consider, including files under a hidden system-update folder.</summary>
+    public static IEnumerable<DiscNode> FilesIncludingSystem(DiscNode root)
+    {
+        foreach (var node in Walk(root, includeSystem: true))
+        {
+            if (!node.IsDirectory)
+            {
+                yield return node;
+            }
+        }
+    }
+
+    public static (long Files, long Directories, long Bytes, long ProtectedFiles) Measure(DiscNode root)
     {
         long files = 0;
         long directories = 0;
@@ -118,7 +133,16 @@ internal static class NodeWalk
             }
         }
 
-        return (files, directories, bytes);
+        long protectedFiles = 0;
+        foreach (var node in FilesIncludingSystem(root))
+        {
+            if (IsProtectedFile(node))
+            {
+                protectedFiles++;
+            }
+        }
+
+        return (files, directories, bytes, protectedFiles);
     }
 
     public static string? DetectPlatform(DiscNode root, string formatId)

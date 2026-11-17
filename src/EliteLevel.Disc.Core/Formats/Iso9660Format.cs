@@ -8,6 +8,7 @@ public sealed class Iso9660Format : IImageFormat
 {
     public string Id => "iso9660";
     public string DisplayName => "ISO 9660";
+    public string SupportPhrase => "ISO 9660/Joliet (including PS3)";
 
     public bool CanOpen(Stream probe, ImageHints hints)
     {
@@ -50,6 +51,7 @@ public sealed class Iso9660Format : IImageFormat
             stats.Files,
             stats.Directories,
             stats.Bytes,
+            stats.ProtectedFiles,
             "image");
         return Task.FromResult<IDiscImage>(new IsoImage(reader, source, identity, root));
     }

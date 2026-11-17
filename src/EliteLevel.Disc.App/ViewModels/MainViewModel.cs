@@ -412,12 +412,18 @@ public partial class MainViewModel : ObservableObject
         }
 
         ChipLine = string.Join('|', chips);
-        MetaLine = string.Join('|',
-        [
+        var meta = new List<string>
+        {
             TextFormat.Count(identity.FileCount) + " files",
             TextFormat.Count(identity.DirectoryCount) + " directories",
             "Opened " + DateTime.Now.ToString("t")
-        ]);
+        };
+        if (identity.ProtectedCount > 0)
+        {
+            meta.Insert(1, TextFormat.Count(identity.ProtectedCount) + " protected skipped");
+        }
+
+        MetaLine = string.Join('|', meta);
         DetailSubtitle = identity.Platform is null
             ? identity.FormatDisplayName
             : identity.Platform + "  ·  " + identity.FormatDisplayName;

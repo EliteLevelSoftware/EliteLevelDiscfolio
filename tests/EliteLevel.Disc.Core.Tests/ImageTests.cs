@@ -2,7 +2,9 @@ using System.Security.Cryptography;
 using System.Text;
 using DiscUtils.Iso9660;
 using EliteLevel.Disc.Core.Extract;
+using EliteLevel.Disc.Core.Formats;
 using EliteLevel.Disc.Core.Hash;
+using EliteLevel.Disc.Core.IO;
 using EliteLevel.Disc.Core.Search;
 
 namespace EliteLevel.Disc.Core.Tests;
@@ -192,6 +194,152 @@ public class ImageTests
     }
 
     [Fact]
+    public void Unsupported_message_is_built_from_the_readers()
+    {
+        var message = DiscImages.UnsupportedFileMessage;
+        Assert.Equal(DiscFormatException.Unrecognized, message);
+        Assert.Contains("ISO 9660/Joliet (including PS3)", message);
+        Assert.Contains("Xbox and Xbox 360 XDVDFS", message);
+        Assert.Contains("folder dumps", message);
+        Assert.DoesNotContain("NSP", message, StringComparison.Ordinal);
+        Assert.DoesNotContain("XCI", message, StringComparison.Ordinal);
+        var iso = message.IndexOf("ISO 9660/Joliet (including PS3)", StringComparison.Ordinal);
+        var xbox = message.IndexOf("Xbox and Xbox 360 XDVDFS", StringComparison.Ordinal);
+        var folder = message.IndexOf("folder dumps", StringComparison.Ordinal);
+        Assert.True(iso < xbox && xbox < folder);
+
+        foreach (var format in DiscImages.RegisteredFormats)
+        {
+            Assert.False(string.IsNullOrWhiteSpace(format.SupportPhrase));
+            Assert.Contains(format.SupportPhrase, message, StringComparison.Ordinal);
+        }
+
+        var withSwitch = DiscImages.DescribeUnsupportedFile(
+        [
+            new Iso9660Format(),
+            new FolderFormat(),
+            new PhraseReader("switch", "Nintendo Switch NSP and XCI")
+        ]);
+        Assert.Contains("ISO 9660/Joliet (including PS3)", withSwitch, StringComparison.Ordinal);
+        Assert.Contains("folder dumps", withSwitch, StringComparison.Ordinal);
+        Assert.EndsWith("or Nintendo Switch NSP and XCI.", withSwitch, StringComparison.Ordinal);
+        Assert.DoesNotContain("Xbox", withSwitch, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void File_summary_adds_protected_entries_extract_will_skip()
+    {
+        Assert.Equal(TextFormat.Count(22), TextFormat.FileSummary(22, 0));
+        Assert.Equal(
+            TextFormat.Count(22) + " files, plus " + TextFormat.Count(150) + " protected system entries skipped on extract",
+            TextFormat.FileSummary(22, 150));
+    }
+
+    [Fact]
+    public async Task Switch_containers_are_named_and_refused()
+    {
+        using var temp = new TempDir();
+        var nsp = Path.Combine(temp.Path, "game.nsp");
+        await File.WriteAllBytesAsync(nsp, "PFS0"u8.ToArray().Concat(new byte[32]).ToArray());
+        var nspError = await Assert.ThrowsAsync<DiscFormatException>(() => DiscImages.OpenAsync(nsp));
+        Assert.Equal(DiscFormatException.SwitchUnsupported, nspError.Message);
+
+        var renamed = Path.Combine(temp.Path, "archive.bin");
+        await File.WriteAllBytesAsync(renamed, "PFS0"u8.ToArray().Concat(new byte[16]).ToArray());
+        var renamedError = await Assert.ThrowsAsync<DiscFormatException>(() => DiscImages.OpenAsync(renamed));
+        Assert.Equal(DiscFormatException.SwitchUnsupported, renamedError.Message);
+
+        var xci = new byte[0x120];
+        "HEAD"u8.CopyTo(xci.AsSpan(0x100));
+        var xciPath = Path.Combine(temp.Path, "card.bin");
+        await File.WriteAllBytesAsync(xciPath, xci);
+        var xciError = await Assert.ThrowsAsync<DiscFormatException>(() => DiscImages.OpenAsync(xciPath));
+        Assert.Equal(DiscFormatException.SwitchUnsupported, xciError.Message);
+
+        var extensionOnly = Path.Combine(temp.Path, "short.xci");
+        await File.WriteAllBytesAsync(extensionOnly, new byte[16]);
+        var extensionError = await Assert.ThrowsAsync<DiscFormatException>(() => DiscImages.OpenAsync(extensionOnly));
+        Assert.Equal(DiscFormatException.SwitchUnsupported, extensionError.Message);
+
+        var isoPath = Path.Combine(temp.Path, "actually-an-iso.nsp");
+        var builder = new CDBuilder { UseJoliet = true, VolumeIdentifier = "NORTHWIND" };
+        builder.AddFile("readme.txt", Encoding.ASCII.GetBytes("hello"));
+        builder.Build(isoPath);
+        await using var image = await DiscImages.OpenAsync(isoPath);
+        Assert.Equal("iso9660", image.Identity.FormatId);
+        Assert.Equal(0L, image.Identity.ProtectedCount);
+    }
+
+    [Fact]
+    public async Task Xdvdfs_protected_system_count_matches_extract()
+    {
+        var files = new (string Path, byte[] Data)[]
+        {
+            ("default.xex", Encoding.ASCII.GetBytes("xex")),
+            ("media/ICON.PNG", Encoding.ASCII.GetBytes("png")),
+            ("EBOOT.BIN", Encoding.ASCII.GetBytes("boot")),
+            ("$SystemUpdate/a.bin", Encoding.ASCII.GetBytes("a")),
+            ("$SystemUpdate/nested/b.bin", Encoding.ASCII.GetBytes("bb")),
+            ("$SystemUpdate/nested/c.bin", Encoding.ASCII.GetBytes("ccc"))
+        };
+        var partition = XdvdfsBuilder.BuildPartition(files);
+        using var temp = new TempDir();
+        var imagePath = XdvdfsBuilder.WriteImage(temp.Path, "xgd.iso", partition, 0);
+
+        await using (var image = await DiscImages.OpenAsync(imagePath))
+        {
+            Assert.Equal(3L, image.Identity.FileCount);
+            Assert.Equal(4L, image.Identity.ProtectedCount);
+            Assert.DoesNotContain(Names(image.Root), name => name.Contains("$SystemUpdate", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains("/EBOOT.BIN", Names(image.Root));
+
+            var dest = Path.Combine(temp.Path, "out");
+            var extracted = await new Extractor().ExtractAsync(
+                [image.Root],
+                new DirectoryInfo(dest),
+                new ExtractOptions(),
+                null,
+                CancellationToken.None);
+            Assert.Equal(2, extracted.Extracted);
+            Assert.Equal(0, extracted.Skipped);
+            Assert.Equal((int)image.Identity.ProtectedCount, extracted.ProtectedSkipped);
+            Assert.True(File.Exists(Path.Combine(dest, "default.xex")));
+            Assert.True(File.Exists(Path.Combine(dest, "media", "ICON.PNG")));
+            Assert.False(File.Exists(Path.Combine(dest, "EBOOT.BIN")));
+            Assert.False(File.Exists(Path.Combine(dest, "$SystemUpdate", "a.bin")));
+            Assert.False(File.Exists(Path.Combine(dest, "$SystemUpdate", "nested", "c.bin")));
+
+            var forced = Path.Combine(temp.Path, "forced");
+            var included = await new Extractor().ExtractAsync(
+                [image.Root],
+                new DirectoryInfo(forced),
+                new ExtractOptions { IncludeProtected = true },
+                null,
+                CancellationToken.None);
+            Assert.Equal(0, included.ProtectedSkipped);
+            Assert.Equal(6, included.Extracted);
+            Assert.Equal("boot", await File.ReadAllTextAsync(Path.Combine(forced, "EBOOT.BIN")));
+            Assert.Equal("ccc", await File.ReadAllTextAsync(Path.Combine(forced, "$SystemUpdate", "nested", "c.bin")));
+        }
+
+        await using (var shown = await DiscImages.OpenAsync(imagePath, new OpenOptions { ShowSystemUpdate = true }))
+        {
+            Assert.Equal(6L, shown.Identity.FileCount);
+            Assert.Equal(4L, shown.Identity.ProtectedCount);
+            Assert.Contains(Names(shown.Root), name => name.Contains("$SystemUpdate", StringComparison.OrdinalIgnoreCase));
+            var dest = Path.Combine(temp.Path, "shown");
+            var extracted = await new Extractor().ExtractAsync(
+                [shown.Root],
+                new DirectoryInfo(dest),
+                new ExtractOptions(),
+                null,
+                CancellationToken.None);
+            Assert.Equal(4, extracted.ProtectedSkipped);
+            Assert.Equal(2, extracted.Extracted);
+        }
+    }
+
+    [Fact]
     public async Task Pattern_extract_keeps_only_matches()
     {
         var partition = XdvdfsBuilder.BuildPartition(
@@ -260,6 +408,16 @@ public class ImageTests
     {
         using var reader = new StreamReader(node.OpenRead(), Encoding.ASCII);
         return await reader.ReadToEndAsync();
+    }
+
+    private sealed class PhraseReader(string id, string phrase) : IImageFormat
+    {
+        public string Id => id;
+        public string DisplayName => phrase;
+        public string SupportPhrase => phrase;
+        public bool CanOpen(Stream probe, ImageHints hints) => false;
+        public Task<IDiscImage> OpenAsync(Stream source, OpenOptions options, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 
     private sealed class TempDir : IDisposable

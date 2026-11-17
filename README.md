@@ -30,7 +30,7 @@ Replace that digest with the hash from `SHA256SUMS.txt` when a release is publis
 
 ## Browse
 
-Open an ISO 9660 or Joliet image, an Xbox or Xbox 360 XDVDFS image (plain, XGD1, XGD2, XGD3, or a Redump layout with a video partition in front), or a folder dump. Detection uses the contents of the file, not the extension.
+Open an ISO 9660 or Joliet image, an Xbox or Xbox 360 XDVDFS image (plain, XGD1, XGD2, XGD3, or a Redump layout with a video partition in front), or a folder dump. Detection uses the contents of the file, not the extension. A Nintendo Switch NSP or XCI is recognized and refused. Switch images are not supported yet.
 
 The window shows the volume, the file tree, and recent images on this machine. Drag an image onto the window to open it.
 
@@ -56,7 +56,21 @@ discfolio hash game.iso --manifest game.sha256
 discfolio search game.iso ICON0
 ```
 
-`--json` is stable output for scripts. See [docs/user-guide.md](docs/user-guide.md).
+`--json` prints indented JSON on standard output, including failures. A failure looks like this, and the process exit code is unchanged:
+
+```json
+{
+  "error": {
+    "code": 2,
+    "kind": "unsupported",
+    "message": "This file is a Nintendo Switch image (NSP or XCI). Switch images aren't supported yet."
+  }
+}
+```
+
+Exit codes are `0` success, `1` user error (`kind` is `user`), `2` unsupported image (`kind` is `unsupported`), and `3` reserved for a later release that needs keys (`kind` would be `needs-keys`).
+
+`info` reports the visible file count. When the default extract will skip protected paths, that line also reports them, for example `22 files, plus 150 protected system entries skipped on extract`. The extra number includes files under a hidden `$SystemUpdate` folder. `extract` uses the same definition for its protected count. See [docs/user-guide.md](docs/user-guide.md).
 
 ## Build
 
@@ -76,4 +90,4 @@ dotnet publish src/EliteLevel.Disc.App -c Release /p:PublishProfile=win-x64-port
 
 Discfolio is for dumps and folders you are allowed to possess. It does not include encryption keys or game content, and it does not modify the source. PlayStation, Xbox, and Nintendo are trademarks of their owners. Elite Level Software is not affiliated with them.
 
-The stance is in [LEGAL.md](LEGAL.md). Third-party licenses are in [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES). This project is [MIT](LICENSE) licensed, copyright Elite Level Software.
+The stance is in [LEGAL.md](LEGAL.md). Third-party licenses are in [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES). Changes are in [CHANGELOG.md](CHANGELOG.md). This project is [MIT](LICENSE) licensed, copyright Elite Level Software.

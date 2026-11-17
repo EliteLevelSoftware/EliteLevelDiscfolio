@@ -22,6 +22,6 @@ A Redump-style image has a video partition in front of that base. When the prefi
 
 A descriptor that itself starts at byte 0 of the file is also accepted.
 
-`$SystemUpdate` is omitted from the default tree and skipped by the default extract. `--show-system` lists it. `--include-protected` copies it unchanged.
+`$SystemUpdate` is omitted from the default tree and skipped by the default extract. `info` reports those files in a separate protected count, and `extract` uses that same count. `--show-system` lists the folder. `--include-protected` copies it unchanged.
 
 Security sectors, drive authentication, and executable decryption are out of scope.

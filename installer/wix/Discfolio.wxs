@@ -1,7 +1,7 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package Name="EliteLevel Discfolio"
            Manufacturer="Elite Level Software"
-           Version="0.1.0.0"
+           Version="0.1.1.0"
            UpgradeCode="7C1E0A2E-5B44-4F1A-9D3C-6E8B1A2F4C70"
            Scope="perMachine">
     <MajorUpgrade DowngradeErrorMessage="A newer version of EliteLevel Discfolio is already installed." />

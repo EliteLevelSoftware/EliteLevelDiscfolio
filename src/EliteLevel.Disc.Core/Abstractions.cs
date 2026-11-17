@@ -64,6 +64,8 @@ public sealed record ImageIdentity(
     long FileCount,
     long DirectoryCount,
     long TotalBytes,
+    /// <summary>Files the default extract skips, including files under a hidden system-update folder.</summary>
+    long ProtectedCount,
     string SourceName);
 
 public readonly record struct ExtractProgress(int Completed, int Total, string CurrentPath, long BytesWritten);
@@ -81,6 +83,10 @@ public interface IImageFormat
 {
     string Id { get; }
     string DisplayName { get; }
+
+    /// <summary>Phrase used when listing formats a file might be. Kept on the reader so the unsupported-file message stays current.</summary>
+    string SupportPhrase { get; }
+
     bool CanOpen(Stream probe, ImageHints hints);
     Task<IDiscImage> OpenAsync(Stream source, OpenOptions options, CancellationToken cancellationToken);
 }
@@ -123,8 +129,12 @@ public interface IHashService
 /// <summary>The image is not a format this build can read.</summary>
 public sealed class DiscFormatException : Exception
 {
-    public const string Unrecognized =
-        "This file does not look like a supported disc image. Check that it is an ISO, XISO, NSP, XCI, or a folder dump.";
+    /// <summary>A file that matched none of the registered readers.</summary>
+    public static string Unrecognized => DiscImages.UnsupportedFileMessage;
+
+    /// <summary>An NSP or XCI container. This build can name it and cannot read it.</summary>
+    public const string SwitchUnsupported =
+        "This file is a Nintendo Switch image (NSP or XCI). Switch images aren't supported yet.";
 
     public DiscFormatException(string message) : base(message)
     {
