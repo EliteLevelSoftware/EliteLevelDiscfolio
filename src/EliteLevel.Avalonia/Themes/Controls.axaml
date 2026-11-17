@@ -1,0 +1,257 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:EliteLevel.Avalonia.Controls">
+
+  <Style Selector="controls|FeatureCard">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Grid>
+          <Border CornerRadius="24" BoxShadow="{StaticResource ElShadowFeatureGlow}" Background="Transparent"/>
+          <Border CornerRadius="24" ClipToBounds="True">
+            <Panel>
+              <Border Background="{StaticResource ElGradFeatureBase}"/>
+              <Border Background="{StaticResource ElGradFeatureGoldGlow}"/>
+              <Border Background="{StaticResource ElGradFeatureOxbloodGlow}"/>
+              <ContentPresenter Margin="22,22,22,20" Content="{TemplateBinding Content}"/>
+            </Panel>
+          </Border>
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="Window">
+    <Setter Property="FontFamily" Value="{StaticResource ElFontUi}"/>
+    <Setter Property="FontSize" Value="13.5"/>
+    <Setter Property="Foreground" Value="{StaticResource ElTextBrush}"/>
+  </Style>
+
+  <Style Selector="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource ElFontUi}"/>
+  </Style>
+
+  <Style Selector="TextBlock.mono">
+    <Setter Property="FontFamily" Value="{StaticResource ElFontMono}"/>
+    <Setter Property="FontSize" Value="12"/>
+  </Style>
+
+  <Style Selector="Button">
+    <Setter Property="FocusAdorner">
+      <FocusAdornerTemplate>
+        <Border BorderBrush="{StaticResource ElGoldBrush}" BorderThickness="2" Margin="-4" CornerRadius="13" IsHitTestVisible="False"/>
+      </FocusAdornerTemplate>
+    </Setter>
+    <Setter Property="Cursor" Value="Hand"/>
+  </Style>
+
+  <Style Selector="Button.el-primary">
+    <Setter Property="Height" Value="42"/>
+    <Setter Property="Padding" Value="22,0"/>
+    <Setter Property="Background" Value="{StaticResource ElGoldBrush}"/>
+    <Setter Property="Foreground" Value="{StaticResource ElTextOnGoldBrush}"/>
+    <Setter Property="FontWeight" Value="Bold"/>
+    <Setter Property="FontSize" Value="13.5"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}" CornerRadius="13" Padding="{TemplateBinding Padding}"
+                BoxShadow="{StaticResource ElShadowGoldButton}">
+          <TextBlock Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
+                     FontWeight="Bold" FontSize="13.5" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.el-primary:pointerover">
+    <Setter Property="Background" Value="#DDBB4A"/>
+  </Style>
+  <Style Selector="Button.el-primary:disabled">
+    <Setter Property="Background" Value="{StaticResource ElCharcoal800Brush}"/>
+    <Setter Property="Foreground" Value="{StaticResource ElTextFaintBrush}"/>
+    <Setter Property="Opacity" Value="1"/>
+  </Style>
+
+  <Style Selector="Button.el-ghost">
+    <Setter Property="Height" Value="42"/>
+    <Setter Property="Padding" Value="18,0"/>
+    <Setter Property="Background" Value="{StaticResource ElGhostOnFeatureBrush}"/>
+    <Setter Property="Foreground" Value="#FFF1E6"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}" CornerRadius="13" Padding="{TemplateBinding Padding}">
+          <TextBlock Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
+                     FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.el-secondary">
+    <Setter Property="Height" Value="42"/>
+    <Setter Property="Padding" Value="18,0"/>
+    <Setter Property="Background" Value="{StaticResource ElCharcoal750Brush}"/>
+    <Setter Property="Foreground" Value="{StaticResource ElTextBrush}"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}" CornerRadius="13" Padding="{TemplateBinding Padding}">
+          <TextBlock Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
+                     FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.el-secondary:pointerover">
+    <Setter Property="Background" Value="{StaticResource ElCharcoal700Brush}"/>
+  </Style>
+
+  <Style Selector="Button.el-icon">
+    <Setter Property="Width" Value="44"/>
+    <Setter Property="Height" Value="44"/>
+    <Setter Property="Background" Value="{StaticResource ElCharcoal800Brush}"/>
+    <Setter Property="Foreground" Value="#C9BDB7"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}" CornerRadius="22" Width="44" Height="44">
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.el-icon:pointerover">
+    <Setter Property="Background" Value="{StaticResource ElCharcoal750Brush}"/>
+  </Style>
+
+  <Style Selector="Button.el-caption">
+    <Setter Property="Width" Value="46"/>
+    <Setter Property="Height" Value="34"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Foreground" Value="#B9ADA7"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}" CornerRadius="0" Width="46" Height="34">
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.el-caption:pointerover">
+    <Setter Property="Background" Value="#0FFFFFFF"/>
+  </Style>
+  <Style Selector="Button.el-caption.el-close.round /template/ Border">
+    <Setter Property="CornerRadius" Value="0,28,0,0"/>
+  </Style>
+  <Style Selector="Button.el-caption.el-close:pointerover">
+    <Setter Property="Background" Value="{StaticResource ElCaptionCloseHoverBrush}"/>
+    <Setter Property="Foreground" Value="White"/>
+  </Style>
+
+  <Style Selector="Button.el-nav">
+    <Setter Property="Height" Value="46"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Foreground" Value="{StaticResource ElText3Brush}"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Setter Property="Padding" Value="30,0"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.el-nav:pointerover">
+    <Setter Property="Foreground" Value="{StaticResource ElText2Brush}"/>
+  </Style>
+  <Style Selector="Button.el-nav.active">
+    <Setter Property="Foreground" Value="{StaticResource ElGoldTextBrush}"/>
+  </Style>
+  <Style Selector="Button.el-nav Path">
+    <Setter Property="Stroke" Value="{StaticResource ElText3Brush}"/>
+  </Style>
+  <Style Selector="Button.el-nav:pointerover Path">
+    <Setter Property="Stroke" Value="{StaticResource ElText2Brush}"/>
+  </Style>
+  <Style Selector="Button.el-nav.active Path">
+    <Setter Property="Stroke" Value="{StaticResource ElGoldBrush}"/>
+  </Style>
+  <Style Selector="Button.el-nav TextBlock.count">
+    <Setter Property="Foreground" Value="#7D726E"/>
+    <Setter Property="FontSize" Value="11.5"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+  </Style>
+
+  <Style Selector="Button.el-row">
+    <Setter Property="Height" Value="29"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Foreground" Value="{StaticResource ElText2Brush}"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Setter Property="Padding" Value="8,0"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}" CornerRadius="9" Padding="{TemplateBinding Padding}">
+          <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center" HorizontalAlignment="Stretch"/>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.el-row:pointerover">
+    <Setter Property="Background" Value="#221D1E"/>
+  </Style>
+  <Style Selector="Button.el-row.selected">
+    <Setter Property="Background" Value="{StaticResource ElCharcoal700Brush}"/>
+    <Setter Property="Foreground" Value="#FFF3E4"/>
+  </Style>
+  <Style Selector="Button.el-row.selected Path.file">
+    <Setter Property="Stroke" Value="{StaticResource ElGoldBrush}"/>
+  </Style>
+
+  <Style Selector="Button.el-tile">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="Transparent" CornerRadius="20">
+          <ContentPresenter Content="{TemplateBinding Content}"/>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="TextBox.plain">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Foreground" Value="{StaticResource ElTextBrush}"/>
+    <Setter Property="CaretBrush" Value="{StaticResource ElGoldBrush}"/>
+    <Setter Property="FontSize" Value="13.5"/>
+    <Setter Property="Padding" Value="0,8"/>
+  </Style>
+
+  <Style Selector="Border.skeleton">
+    <Setter Property="Background" Value="{StaticResource ElCharcoal800Brush}"/>
+    <Setter Property="Opacity" Value="0.85"/>
+  </Style>
+
+  <Style Selector="ListBox">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+  </Style>
+  <Style Selector="ListBoxItem">
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="Margin" Value="0"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="FocusAdorner" Value="{x:Null}"/>
+  </Style>
+  <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent"/>
+  </Style>
+
+  <Style Selector="CheckBox">
+    <Setter Property="Foreground" Value="{StaticResource ElText2Brush}"/>
+    <Setter Property="FontSize" Value="13.5"/>
+  </Style>
+</Styles>

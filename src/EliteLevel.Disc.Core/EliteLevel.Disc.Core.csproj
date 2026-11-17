@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>EliteLevel.Disc.Core</RootNamespace>
+    <AssemblyName>EliteLevel.Disc.Core</AssemblyName>
+    <Description>Read-only virtual file system for console disc images. No user-interface dependency.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="LTRData.DiscUtils.Iso9660" Version="1.0.91" />
+  </ItemGroup>
+</Project>

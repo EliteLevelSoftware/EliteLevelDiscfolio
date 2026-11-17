@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="EliteLevel.Avalonia.Controls.MediaTile">
+  <Border CornerRadius="20" ClipToBounds="True" Background="{StaticResource ElCharcoal800Brush}">
+    <Grid>
+      <Image x:Name="ArtImage" Stretch="UniformToFill"/>
+      <Border Background="{StaticResource ElGradVignette}" IsHitTestVisible="False"/>
+      <Border Background="{StaticResource ElGrainBrush}" IsHitTestVisible="False"/>
+      <Border VerticalAlignment="Bottom" Background="{StaticResource ElGradTileScrim}" Padding="14,40,14,13" IsHitTestVisible="False">
+        <StackPanel Spacing="2">
+          <TextBlock x:Name="TitleText" FontSize="14" FontWeight="Bold" LetterSpacing="-0.14" Foreground="#FFF5EC" TextTrimming="CharacterEllipsis"/>
+          <TextBlock x:Name="MetaText" FontSize="11.5" FontWeight="Medium" Foreground="#CDBFB8" TextTrimming="CharacterEllipsis"/>
+        </StackPanel>
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>

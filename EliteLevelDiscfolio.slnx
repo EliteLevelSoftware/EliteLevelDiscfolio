@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/EliteLevel.Avalonia/EliteLevel.Avalonia.csproj" />
+    <Project Path="src/EliteLevel.Disc.App/EliteLevel.Disc.App.csproj" />
+    <Project Path="src/EliteLevel.Disc.Cli/EliteLevel.Disc.Cli.csproj" />
+    <Project Path="src/EliteLevel.Disc.Core/EliteLevel.Disc.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/EliteLevel.Disc.App.Tests/EliteLevel.Disc.App.Tests.csproj" />
+    <Project Path="tests/EliteLevel.Disc.Core.Tests/EliteLevel.Disc.Core.Tests.csproj" />
+  </Folder>
+</Solution>

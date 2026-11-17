@@ -1,0 +1,43 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="EliteLevel Discfolio"
+           Manufacturer="Elite Level Software"
+           Version="0.1.0.0"
+           UpgradeCode="7C1E0A2E-5B44-4F1A-9D3C-6E8B1A2F4C70"
+           Scope="perMachine">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of EliteLevel Discfolio is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="EliteLevel Discfolio">
+        <Component Id="GuiComponent" Guid="B1E4C8A2-7D55-4E18-9A61-2C3F5D7E9012">
+          <File Id="DiscfolioExe" Source="$(var.PublishDir)\Discfolio.exe" KeyPath="yes" />
+        </Component>
+        <Component Id="CliComponent" Guid="C2F5D9B3-8E66-4F29-8B72-3D4A6E8F0123">
+          <File Id="CliExe" Source="$(var.PublishDir)\discfolio.exe" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="ShortcutComponent" Guid="D3A6E0C4-9F77-4030-9C83-4E5B7F901234">
+        <Shortcut Id="StartMenuShortcut"
+                  Name="EliteLevel Discfolio"
+                  Target="[#DiscfolioExe]"
+                  WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\Elite Level Software\Discfolio"
+                       Name="Installed"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+        <RemoveFolder Id="RemoveStartMenu" On="uninstall" />
+      </Component>
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="EliteLevel Discfolio">
+      <ComponentRef Id="GuiComponent" />
+      <ComponentRef Id="CliComponent" />
+      <ComponentRef Id="ShortcutComponent" />
+    </Feature>
+  </Package>
+</Wix>

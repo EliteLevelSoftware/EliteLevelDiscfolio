@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>EliteLevel.Disc.App.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless.XUnit" Version="11.3.23" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.23" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="LTRData.DiscUtils.Iso9660" Version="1.0.91" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\EliteLevel.Disc.App\EliteLevel.Disc.App.csproj" />
+  </ItemGroup>
+</Project>
