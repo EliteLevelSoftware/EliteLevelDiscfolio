@@ -24,7 +24,7 @@ PlayStation 3 game data on a physical disc is encrypted. The file list is readab
 
 ## Updates
 
-Install Discfolio from the GitHub release for EliteLevelSoftware/EliteLevelDiscfolio. The installers are `Discfolio-<version>-Windows-Setup.exe`, `Discfolio-<version>-macOS-AppleSilicon-Setup.pkg`, and `Discfolio-<version>-Linux-x64.AppImage`. `<version>` is the release version, for example `0.6.1`.
+Install Discfolio from the GitHub release for EliteLevelSoftware/EliteLevelDiscfolio. The installers are `Discfolio-<version>-Windows-Setup.exe`, `Discfolio-<version>-macOS-AppleSilicon-Setup.pkg`, and `Discfolio-<version>-Linux-x64.AppImage`. `<version>` is the release version, for example `0.6.2`.
 
 The installed app checks those public releases. The check runs on startup unless you turn it off under Settings. Check now uses the same source. The channel is stable or prerelease. Stable is the default.
 

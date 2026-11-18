@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.2
+
+- Linux release files restored. vpk 1.2.161 does not accept `--noPortable` on Linux, so the 0.6.1 pack stopped before upload. The AppImage, the full package, and `releases.linux-x64-stable.json` are published again.
+
 ## 0.6.1
 
 - Release files are named for the system they install. Download `Discfolio-<version>-Windows-Setup.exe`, `Discfolio-<version>-macOS-AppleSilicon-Setup.pkg`, or `Discfolio-<version>-Linux-x64.AppImage`. Portable zips and delta packages are no longer published.

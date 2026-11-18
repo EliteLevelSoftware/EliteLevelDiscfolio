@@ -159,7 +159,9 @@ jobs:
           if [[ "$tag" == *-* ]]; then track=prerelease; else track=stable; fi
           channel="linux-x64-$track"
           mkdir -p artifacts/velopack
-          vpk --yes pack --packId Discfolio --packVersion "$tag" --packDir artifacts/pack --mainExe Discfolio --packTitle "EliteLevel Discfolio" --packAuthors "Elite Level Software" --icon src/EliteLevel.Disc.App/Assets/icon.png --channel "$channel" --delta none --noPortable --releaseNotes release-notes.md --outputDir artifacts/velopack
+          # vpk 1.2.161 removes --noPortable from the Linux pack command.
+          # Passing it stops the pack before an AppImage is written.
+          vpk --yes pack --packId Discfolio --packVersion "$tag" --packDir artifacts/pack --mainExe Discfolio --packTitle "EliteLevel Discfolio" --packAuthors "Elite Level Software" --icon src/EliteLevel.Disc.App/Assets/icon.png --channel "$channel" --delta none --releaseNotes release-notes.md --outputDir artifacts/velopack
           bash scripts/rename-release-assets.sh artifacts/velopack "$tag" linux "$channel"
           upload=(
             vpk upload github

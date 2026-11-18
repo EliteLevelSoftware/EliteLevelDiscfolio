@@ -63,3 +63,72 @@ jobs:
         with:
           name: velopack-dry-run
           path: artifacts/velopack
+
+  velopack-linux:
+    name: Velopack pack Linux (no upload)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Publish and pack
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y squashfs-tools
+          dotnet publish src/EliteLevel.Disc.App/EliteLevel.Disc.App.csproj -c Release -r linux-x64 --self-contained true -o artifacts/pack
+          dotnet tool install --global vpk --version 1.2.161
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -1 | tr -d '[:space:]')
+          mkdir -p artifacts/velopack
+          # Same flags as the tag workflow. vpk 1.2.161 has no --noPortable on Linux.
+          vpk --yes pack --packId Discfolio --packVersion "$version" --packDir artifacts/pack --mainExe Discfolio --packTitle "EliteLevel Discfolio" --packAuthors "Elite Level Software" --icon src/EliteLevel.Disc.App/Assets/icon.png --channel linux-x64-stable --delta none --outputDir artifacts/velopack
+          bash scripts/rename-release-assets.sh artifacts/velopack "$version" linux linux-x64-stable
+          test -f "artifacts/velopack/Discfolio-${version}-Linux-x64.AppImage"
+          test -f "artifacts/velopack/Discfolio-${version}-linux-x64-stable-full.nupkg"
+          test -f "artifacts/velopack/releases.linux-x64-stable.json"
+          ls -la artifacts/velopack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: velopack-linux-dry-run
+          path: artifacts/velopack
+
+  velopack-macos:
+    name: Velopack pack macOS (no upload)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Publish and pack
+        run: |
+          set -euo pipefail
+          dotnet publish src/EliteLevel.Disc.App/EliteLevel.Disc.App.csproj -c Release -r osx-arm64 --self-contained true -o artifacts/pack
+          dotnet tool install --global vpk --version 1.2.161
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -1 | tr -d '[:space:]')
+          mkdir -p artifacts/velopack
+          vpk --yes pack \
+            --packId Discfolio \
+            --packVersion "$version" \
+            --packDir artifacts/pack \
+            --mainExe Discfolio \
+            --packTitle "EliteLevel Discfolio" \
+            --packAuthors "Elite Level Software" \
+            --icon src/EliteLevel.Disc.App/Assets/icon.icns \
+            --channel osx-arm64-stable \
+            --delta none \
+            --noPortable \
+            --outputDir artifacts/velopack
+          bash scripts/rename-release-assets.sh artifacts/velopack "$version" macos osx-arm64-stable
+          test -f "artifacts/velopack/Discfolio-${version}-macOS-AppleSilicon-Setup.pkg"
+          test -f "artifacts/velopack/Discfolio-${version}-osx-arm64-stable-full.nupkg"
+          test -f "artifacts/velopack/releases.osx-arm64-stable.json"
+          ls -la artifacts/velopack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: velopack-macos-dry-run
+          path: artifacts/velopack

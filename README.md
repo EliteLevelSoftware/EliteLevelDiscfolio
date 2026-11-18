@@ -23,7 +23,7 @@ A read-only explorer for console disc images and folder dumps.
 
 ## Download
 
-Installers are on the [releases](https://github.com/EliteLevelSoftware/EliteLevelDiscfolio/releases) page. `<version>` is the release version, for example `0.6.1`.
+Installers are on the [releases](https://github.com/EliteLevelSoftware/EliteLevelDiscfolio/releases) page. `<version>` is the release version, for example `0.6.2`.
 
 `Discfolio-<version>-Windows-Setup.exe` installs per user to `%LocalAppData%\Discfolio`, adds Start Menu and Desktop shortcuts, and registers in Installed apps. It does not need administrator rights. Uninstall from Installed apps.
 

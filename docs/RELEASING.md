@@ -18,7 +18,7 @@ A prerelease tag has a hyphen after the version, for example `v0.4.0-beta.1`. Th
 
 ## What a release contains
 
-`vpk pack` runs with `--delta none` and `--noPortable`. Delta packages are not built, and the workflow does not download the previous release. On Windows and macOS, `--noPortable` skips the portable zip. On Linux, vpk 1.2.161 still builds the AppImage, because the full package is that AppImage and `--noPortable` does not apply there. Linux does not produce a separate portable zip.
+`vpk pack` runs with `--delta none`. Delta packages are not built, and the workflow does not download the previous release. On Windows and macOS, `--noPortable` skips the portable zip. The Linux pack command in vpk 1.2.161 does not accept `--noPortable`, so the Linux job omits that flag. Linux still builds one AppImage, which is the full package, and does not produce a portable zip. The Linux upload is that renamed AppImage, the full nupkg, and `releases.linux-x64-<track>.json`.
 
 The files a person downloads are renamed after packing:
 
@@ -26,7 +26,7 @@ The files a person downloads are renamed after packing:
 - `Discfolio-<version>-macOS-AppleSilicon-Setup.pkg`
 - `Discfolio-<version>-Linux-x64.AppImage`
 
-`<version>` is the tag without the leading `v`, for example `0.6.1`. The setup program installs per user to `%LocalAppData%\Discfolio`. It adds Start Menu and Desktop shortcuts, uses the Discfolio icon, registers in Installed apps, and uninstalls cleanly. The pack id is `Discfolio`. The macOS pkg is unsigned. The Linux AppImage is attached when that pack succeeds.
+`<version>` is the tag without the leading `v`, for example `0.6.2`. The setup program installs per user to `%LocalAppData%\Discfolio`. It adds Start Menu and Desktop shortcuts, uses the Discfolio icon, registers in Installed apps, and uninstalls cleanly. The pack id is `Discfolio`. The macOS pkg is unsigned. The Linux AppImage is attached when that pack succeeds.
 
 `vpk upload` sends the paths listed in `assets.<channel>.json`. The rename step writes the new download name into that file. The full nupkg and the releases index stay as `vpk` named them:
 
@@ -55,7 +55,7 @@ The macOS job runs on `macos-latest`. That image's `/bin/bash` is bash 3.2, and 
 
 The hosted runner has no Apple Developer identity, so the pkg and the app are unsigned and not notarized. Gatekeeper asks before the app opens. Signing needs a Developer ID and a notary profile, which this workflow does not have.
 
-CI on pull requests also runs `vpk pack` for Windows, with `--delta none` and `--noPortable`, and does not upload. It renames the setup program the same way as the tag workflow and checks that the full nupkg and `releases.win-x64-stable.json` kept their names. The version packed there is the `<Version>` in `Directory.Build.props`. The tag workflow packs the version from the tag.
+CI on pull requests also runs `vpk pack` for Windows and for Linux, and does not upload. Windows uses `--delta none` and `--noPortable`. Linux uses `--delta none` and does not pass `--noPortable`. Each job renames the download the same way as the tag workflow and checks that the full nupkg and the releases index kept their names. The macOS pack dry run starts only from a workflow dispatch, so it does not block a pull request. The version packed there is the `<Version>` in `Directory.Build.props`. The tag workflow packs the version from the tag.
 
 ## Updates
 
