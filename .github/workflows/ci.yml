@@ -49,11 +49,11 @@ jobs:
       - name: Install WiX
         run: dotnet tool install --global wix --version 5.0.2
       - name: Build MSI
-        run: wix build installer/wix/Discfolio.wxs -d PublishDir=artifacts/win-x64 -o artifacts/EliteLevelDiscfolio-0.2.0.msi
+        run: wix build installer/wix/Discfolio.wxs -d PublishDir=artifacts/win-x64 -o artifacts/EliteLevelDiscfolio-0.2.1.msi
       - uses: actions/upload-artifact@v4
         with:
           name: windows-portable
           path: |
             artifacts/win-x64/Discfolio.exe
             artifacts/win-x64/discfolio.exe
-            artifacts/EliteLevelDiscfolio-0.2.0.msi
+            artifacts/EliteLevelDiscfolio-0.2.1.msi

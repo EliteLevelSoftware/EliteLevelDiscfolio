@@ -628,7 +628,7 @@ public partial class MainViewModel : ObservableObject
         var version = typeof(MainViewModel).Assembly.GetName().Version;
         if (version is null)
         {
-            return "0.2.0";
+            return "0.2.1";
         }
 
         return string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{version.Major}.{version.Minor}.{Math.Max(version.Build, 0)}");

@@ -8,7 +8,7 @@ namespace EliteLevel.Disc.Core.Titles;
 
 /// <summary>
 /// Art and metadata for one image, stored under the Discfolio data folder.
-/// The key is the image path, length and last-write time. The image is not modified.
+/// The key is the reader schema, image path, length and last-write time. The image is not modified.
 /// </summary>
 public sealed class TitleArtCache
 {
@@ -18,6 +18,9 @@ public sealed class TitleArtCache
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         WriteIndented = true
     };
+
+    /// <summary>Bumped when title discovery changes, so an older cache entry is left unused.</summary>
+    internal const int SchemaVersion = 2;
 
     private readonly string _directory;
 
@@ -168,7 +171,7 @@ public sealed class TitleArtCache
             return null;
         }
 
-        var text = string.Create(CultureInfo.InvariantCulture, $"{full}\n{length}\n{ticks}");
+        var text = string.Create(CultureInfo.InvariantCulture, $"{SchemaVersion}\n{full}\n{length}\n{ticks}");
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text))).ToLowerInvariant();
     }
 

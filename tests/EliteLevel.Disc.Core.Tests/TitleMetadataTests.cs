@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using DiscUtils.Iso9660;
@@ -223,6 +225,129 @@ public class TitleMetadataTests
 
         Directory.SetLastWriteTimeUtc(root, new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         Assert.Null(store.TryGet(root));
+    }
+
+    [Fact]
+    public async Task Nested_ps3_iso_uses_the_shallowest_game_folder()
+    {
+        using var temp = new TempDir();
+        var icon = SyntheticTitles.Png(8, 9, 10);
+        var banner = SyntheticTitles.Png(11, 12, 13);
+        var deepIcon = SyntheticTitles.Png(1, 1, 1);
+        var iso = Path.Combine(temp.Path, "potcawe.iso");
+        var builder = new CDBuilder { UseJoliet = true, VolumeIdentifier = "POTCAWE" };
+        var title = "Pirates of the Caribbean At World's End";
+        builder.AddFile(title + @"\PS3_DISC.SFB", new byte[] { 1 });
+        builder.AddFile(title + @"\PS3_UPDATE\PS3UPDAT.PUP", new byte[] { 2 });
+        builder.AddFile(title + @"\PS3_GAME\PARAM.SFO", SyntheticTitles.Sfo("Pirates of the Caribbean: At World's End", "BLES00058", "01.01", "DG", 4));
+        builder.AddFile(title + @"\PS3_GAME\ICON0.PNG", icon);
+        builder.AddFile(title + @"\PS3_GAME\PIC1.PNG", banner);
+        builder.AddFile(title + @"\PS3_GAME\USRDIR\EBOOT.BIN", new byte[] { 3 });
+        builder.AddFile(@"other\later\PS3_GAME\PARAM.SFO", SyntheticTitles.Sfo("Too Deep", "BLUS99999", "00.00", "DG", 0));
+        builder.AddFile(@"other\later\PS3_GAME\ICON0.PNG", deepIcon);
+        builder.Build(iso);
+
+        await using var image = await DiscImages.OpenAsync(iso);
+        var meta = TitleMetadataReader.Read(image);
+        Assert.Equal("Pirates of the Caribbean: At World's End", meta.Title);
+        Assert.Equal("BLES00058", meta.TitleId);
+        Assert.Equal("01.01", meta.Version);
+        Assert.Equal(icon, meta.Icon);
+        Assert.Equal(banner, meta.Banner);
+        Assert.NotEqual(deepIcon, meta.Icon);
+    }
+
+    [Fact]
+    public async Task Nested_roots_are_case_insensitive_and_stop_at_two_levels()
+    {
+        using var temp = new TempDir();
+        var icon = SyntheticTitles.Png(2, 3, 4);
+        var root = Path.Combine(temp.Path, "dump");
+        var game = Path.Combine(root, "Wrapper", "ps3_game");
+        Directory.CreateDirectory(game);
+        await File.WriteAllBytesAsync(Path.Combine(game, "param.sfo"), SyntheticTitles.Sfo("Lower Case", "BLUS00077", "01.00", "DG", 1));
+        await File.WriteAllBytesAsync(Path.Combine(game, "icon0.png"), icon);
+
+        await using (var image = await DiscImages.OpenAsync(root))
+        {
+            var meta = TitleMetadataReader.Read(image);
+            Assert.Equal("Lower Case", meta.Title);
+            Assert.Equal("BLUS00077", meta.TitleId);
+            Assert.Equal(icon, meta.Icon);
+        }
+
+        var tooDeep = Path.Combine(temp.Path, "far", "a", "b", "c", "PS3_GAME");
+        Directory.CreateDirectory(tooDeep);
+        await File.WriteAllBytesAsync(Path.Combine(tooDeep, "PARAM.SFO"), SyntheticTitles.Sfo("Out of Reach", "BLUS00000", "01.00", "DG", 0));
+        await File.WriteAllBytesAsync(Path.Combine(tooDeep, "ICON0.PNG"), icon);
+        await using (var image = await DiscImages.OpenAsync(Path.Combine(temp.Path, "far")))
+        {
+            Assert.Null(TitleMetadataReader.Read(image).Title);
+        }
+
+        var xexRoot = Path.Combine(temp.Path, "xbox", "disc one", "title");
+        Directory.CreateDirectory(xexRoot);
+        var xexIcon = SyntheticTitles.Png(5, 6, 7);
+        var nxe = SyntheticTitles.Png(8, 8, 8);
+        var version = 1u | (2u << 4) | (3u << 8);
+        await File.WriteAllBytesAsync(Path.Combine(xexRoot, "Default.XEX"), SyntheticTitles.Xex(0x4D530010, version, "Nested Rally", xexIcon, resourceInFile: true));
+        await File.WriteAllBytesAsync(Path.Combine(xexRoot, "nxeart"), nxe);
+        await using (var image = await DiscImages.OpenAsync(Path.Combine(temp.Path, "xbox")))
+        {
+            var meta = TitleMetadataReader.Read(image);
+            Assert.Equal("Nested Rally", meta.Title);
+            Assert.Equal("4D530010", meta.TitleId);
+            Assert.Equal(xexIcon, meta.Icon);
+            Assert.Equal(nxe, meta.Banner);
+        }
+
+        var xbeRoot = Path.Combine(temp.Path, "og", "alpha", "beta");
+        Directory.CreateDirectory(xbeRoot);
+        var xbeIcon = SyntheticTitles.Png(9, 0, 1);
+        await File.WriteAllBytesAsync(Path.Combine(xbeRoot, "DEFAULT.XBE"), SyntheticTitles.Xbe(0x4D53001A, "Nested Fabrikam", xbeIcon, 3));
+        await using (var image = await DiscImages.OpenAsync(Path.Combine(temp.Path, "og")))
+        {
+            var meta = TitleMetadataReader.Read(image);
+            Assert.Equal("Nested Fabrikam", meta.Title);
+            Assert.Equal("4D53001A", meta.TitleId);
+            Assert.Equal(xbeIcon, meta.Icon);
+        }
+    }
+
+    [Fact]
+    public async Task Cache_ignores_an_entry_from_the_previous_reader()
+    {
+        using var temp = new TempDir();
+        var cache = Path.Combine(temp.Path, "cache");
+        var root = Path.Combine(temp.Path, "disc");
+        Directory.CreateDirectory(root);
+        var icon = SyntheticTitles.Png(4, 5, 6);
+        await File.WriteAllBytesAsync(Path.Combine(root, "PARAM.SFO"), SyntheticTitles.Sfo("Cached", "BLUS00009", "01.00", "DG", 0));
+        await File.WriteAllBytesAsync(Path.Combine(root, "ICON0.PNG"), icon);
+
+        var info = new DirectoryInfo(root);
+        var legacyText = string.Create(CultureInfo.InvariantCulture, $"{info.FullName}\n0\n{info.LastWriteTimeUtc.Ticks}");
+        var legacy = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(legacyText))).ToLowerInvariant();
+        var legacyDir = Path.Combine(cache, legacy);
+        Directory.CreateDirectory(legacyDir);
+        await File.WriteAllTextAsync(Path.Combine(legacyDir, "meta.json"), """
+        {
+          "title": "POTCAWE"
+        }
+        """);
+
+        var store = new TitleArtCache(cache);
+        Assert.Null(store.TryGet(root));
+
+        await using var image = await DiscImages.OpenAsync(root);
+        var cached = store.Store(root, TitleMetadataReader.Read(image));
+        Assert.Equal("Cached", cached.Title);
+        Assert.Equal("BLUS00009", cached.TitleId);
+        Assert.NotNull(cached.IconPath);
+        Assert.NotEqual(Path.GetFullPath(legacyDir), Path.GetDirectoryName(Path.GetFullPath(cached.IconPath)));
+        Assert.Equal("Cached", store.TryGet(root)?.Title);
+        Assert.Equal(icon, await File.ReadAllBytesAsync(cached.IconPath));
+        Assert.True(File.Exists(Path.Combine(legacyDir, "meta.json")));
     }
 
     [Fact]

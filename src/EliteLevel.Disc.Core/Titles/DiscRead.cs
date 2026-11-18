@@ -46,6 +46,46 @@ internal static class DiscRead
         return current.IsDirectory ? null : current;
     }
 
+    /// <summary>
+    /// The shallowest directory, including <paramref name="root"/>, for which <paramref name="match"/> is true.
+    /// <paramref name="maxDepth"/> is how many child levels may be entered. Zero is the root only.
+    /// </summary>
+    public static IDiscNode? Shallowest(IDiscNode root, int maxDepth, Func<IDiscNode, bool> match)
+    {
+        var level = new List<IDiscNode> { root };
+        for (var depth = 0; depth <= maxDepth; depth++)
+        {
+            foreach (var node in level)
+            {
+                if (match(node))
+                {
+                    return node;
+                }
+            }
+
+            if (depth == maxDepth)
+            {
+                break;
+            }
+
+            var next = new List<IDiscNode>();
+            foreach (var node in level)
+            {
+                foreach (var child in node.Children)
+                {
+                    if (child.IsDirectory)
+                    {
+                        next.Add(child);
+                    }
+                }
+            }
+
+            level = next;
+        }
+
+        return null;
+    }
+
     public static IDiscNode? FindFile(IDiscNode node, string name)
     {
         var direct = File(node, name);

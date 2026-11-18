@@ -46,10 +46,16 @@ public static class TitleMetadataReader
     private static bool TryPlayStation3(IDiscNode root, out TitleMetadata metadata)
     {
         metadata = TitleMetadata.Empty;
-        var game = DiscRead.Child(root, "PS3_GAME");
+        var home = DiscRead.Shallowest(root, 2, IsPlayStationRoot);
+        if (home is null)
+        {
+            return false;
+        }
+
+        var game = DiscRead.Child(home, "PS3_GAME");
         if (game is not { IsDirectory: true })
         {
-            game = DiscRead.File(root, "PARAM.SFO") is not null ? root : null;
+            game = DiscRead.File(home, "PARAM.SFO") is not null ? home : null;
         }
 
         if (game is null)
@@ -99,10 +105,33 @@ public static class TitleMetadataReader
         return true;
     }
 
+    /// <summary>A directory that holds PS3_DISC.SFB, PS3_GAME/PARAM.SFO, or PARAM.SFO itself.</summary>
+    private static bool IsPlayStationRoot(IDiscNode directory)
+    {
+        if (DiscRead.File(directory, "PS3_DISC.SFB") is not null)
+        {
+            return true;
+        }
+
+        var game = DiscRead.Child(directory, "PS3_GAME");
+        if (game is { IsDirectory: true } && DiscRead.File(game, "PARAM.SFO") is not null)
+        {
+            return true;
+        }
+
+        return DiscRead.File(directory, "PARAM.SFO") is not null;
+    }
+
     private static bool TryXbox360(IDiscNode root, out TitleMetadata metadata)
     {
         metadata = TitleMetadata.Empty;
-        var xex = DiscRead.File(root, "default.xex");
+        var home = DiscRead.Shallowest(root, 2, directory => DiscRead.File(directory, "default.xex") is not null);
+        if (home is null)
+        {
+            return false;
+        }
+
+        var xex = DiscRead.File(home, "default.xex");
         if (xex is null)
         {
             return false;
@@ -121,7 +150,7 @@ public static class TitleMetadataReader
         string? iconName = icon is null ? null : "default.xex";
         byte[]? banner = null;
         string? bannerName = null;
-        var nxeNode = DiscRead.FindFile(root, "nxeart");
+        var nxeNode = DiscRead.File(home, "nxeart") ?? DiscRead.FindFile(home, "nxeart");
         var nxeRaw = DiscRead.Bytes(nxeNode, DiscRead.ImageCap);
         var nxe = nxeRaw is null ? null : ImageSniff.AsImage(nxeRaw);
         if (nxe is not null)
@@ -156,7 +185,13 @@ public static class TitleMetadataReader
     private static bool TryOriginalXbox(IDiscNode root, out TitleMetadata metadata)
     {
         metadata = TitleMetadata.Empty;
-        var xbe = DiscRead.File(root, "default.xbe");
+        var home = DiscRead.Shallowest(root, 2, directory => DiscRead.File(directory, "default.xbe") is not null);
+        if (home is null)
+        {
+            return false;
+        }
+
+        var xbe = DiscRead.File(home, "default.xbe");
         if (xbe is null)
         {
             return false;

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- Title art is found when `PS3_DISC.SFB`, `PS3_GAME/PARAM.SFO`, `default.xex` or `default.xbe` sits up to two folders below the image root. The shallowest match is used. A PlayStation 3 disc whose game folder is nested under the title name, such as a `POTCAWE` volume, shows that title and its icon instead of the volume label.
+- The art cache key includes a reader version, so an entry saved before this fix is computed again.
+
 ## 0.2.0
 
 - Library tiles use the icon from the image. The open banner uses PIC1 (or PIC0, or a softened icon) and the side card shows the title and the title ID. PlayStation 3 reads PARAM.SFO, ICON0.PNG and PIC1.PNG. Xbox 360 reads the default.xex execution info and the embedded XDBF title and image, and nxeart when that file is present. Original Xbox reads the default.xbe certificate and the $$XTIMAGE section when it holds a PNG or JPEG. Other ISO 9660 images keep the volume label, and a simple autorun.inf icon is used when the icon line points at an image file.
