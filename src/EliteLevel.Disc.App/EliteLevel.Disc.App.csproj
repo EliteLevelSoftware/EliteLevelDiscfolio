@@ -21,6 +21,6 @@
     <ProjectReference Include="..\EliteLevel.Disc.Core\EliteLevel.Disc.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <AvaloniaResource Include="Assets\**\*" />
+    <AvaloniaResource Include="Assets\**\*" Exclude="Assets\icon.icns" />
   </ItemGroup>
 </Project>

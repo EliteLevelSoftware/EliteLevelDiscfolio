@@ -152,7 +152,6 @@ jobs:
     name: macOS pack
     needs: windows
     runs-on: macos-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -175,10 +174,55 @@ jobs:
           dotnet tool install --global vpk --version 1.2.161
           export PATH="$PATH:$HOME/.dotnet/tools"
           tag="${GITHUB_REF_NAME#v}"
-          if [[ "$tag" == *-* ]]; then track=prerelease; pre=(--pre); else track=stable; pre=(); fi
+          # macos-latest is bash 3.2. With set -u, "${pre[@]}" on an empty array
+          # is an unbound variable, so a stable tag exited before vpk
+          # (pre[@]: unbound variable). Keep each argument list non-empty and
+          # append --pre only for a prerelease tag.
+          if [[ "$tag" == *-* ]]; then track=prerelease; else track=stable; fi
           channel="osx-arm64-$track"
           mkdir -p artifacts/velopack
-          vpk download github --repoUrl https://github.com/EliteLevelSoftware/EliteLevelDiscfolio --channel "$channel" --outputDir artifacts/velopack --token "$GITHUB_TOKEN" "${pre[@]}" || true
+          download=(
+            vpk download github
+            --repoUrl https://github.com/EliteLevelSoftware/EliteLevelDiscfolio
+            --channel "$channel"
+            --outputDir artifacts/velopack
+            --token "$GITHUB_TOKEN"
+          )
+          if [[ "$track" == prerelease ]]; then download+=(--pre); fi
+          "${download[@]}" || true
           if compgen -G "artifacts/velopack/*-full.nupkg" > /dev/null; then delta=BestSpeed; else delta=None; fi
-          vpk --yes pack --packId Discfolio --packVersion "$tag" --packDir artifacts/pack --mainExe Discfolio --packTitle "EliteLevel Discfolio" --packAuthors "Elite Level Software" --icon src/EliteLevel.Disc.App/Assets/icon.png --channel "$channel" --delta "$delta" --releaseNotes release-notes.md --outputDir artifacts/velopack
-          vpk upload github --outputDir artifacts/velopack --channel "$channel" --repoUrl https://github.com/EliteLevelSoftware/EliteLevelDiscfolio --token "$GITHUB_TOKEN" --publish --merge --releaseName "EliteLevel Discfolio $tag" --tag "$GITHUB_REF_NAME" "${pre[@]}"
+          # vpk builds the .app bundle and accepts only an .icns icon.
+          vpk --yes pack \
+            --packId Discfolio \
+            --packVersion "$tag" \
+            --packDir artifacts/pack \
+            --mainExe Discfolio \
+            --packTitle "EliteLevel Discfolio" \
+            --packAuthors "Elite Level Software" \
+            --icon src/EliteLevel.Disc.App/Assets/icon.icns \
+            --channel "$channel" \
+            --delta "$delta" \
+            --releaseNotes release-notes.md \
+            --outputDir artifacts/velopack
+          ls -la artifacts/velopack
+          missing=0
+          compgen -G "artifacts/velopack/*-full.nupkg" > /dev/null || missing=1
+          compgen -G "artifacts/velopack/*-Portable.zip" > /dev/null || missing=1
+          compgen -G "artifacts/velopack/*-Setup.pkg" > /dev/null || missing=1
+          if [[ "$missing" -ne 0 ]]; then
+            echo "vpk pack did not produce the full package, portable zip, and setup pkg" >&2
+            exit 1
+          fi
+          upload=(
+            vpk upload github
+            --outputDir artifacts/velopack
+            --channel "$channel"
+            --repoUrl https://github.com/EliteLevelSoftware/EliteLevelDiscfolio
+            --token "$GITHUB_TOKEN"
+            --publish
+            --merge
+            --releaseName "EliteLevel Discfolio $tag"
+            --tag "$GITHUB_REF_NAME"
+          )
+          if [[ "$track" == prerelease ]]; then upload+=(--pre); fi
+          "${upload[@]}"

@@ -26,7 +26,7 @@ Windows builds are on the [releases](https://github.com/EliteLevelSoftware/Elite
 
 Discfolio checks those public releases for updates when it starts. That check is on by default and can be turned off under Settings. Check now is there too, along with the channel: stable or prerelease. When an update is available, a notice downloads it in the background. Discfolio restarts only after you choose OK. The public releases need no token.
 
-Linux and macOS packages are attached when that pack succeeds. You can also build from source.
+The Linux AppImage is attached when that pack succeeds. macOS (Apple silicon) is an unsigned setup pkg and a portable zip on the same release. Gatekeeper asks before that app opens. You can also build from source.
 
 ## Browse
 

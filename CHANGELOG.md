@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- macOS releases for Apple silicon are packed with Velopack. The release gets an unsigned setup pkg and a portable zip. The build machine has no Apple signing identity, so Gatekeeper asks before the app opens.
+
 ## 0.4.0
 
 - Open a disc in an optical drive and browse it the same way as an image file. The drive is read a sector at a time and is never written. Windows uses the drive letter, Linux uses `/dev/sr*` and `/dev/cdrom`, and macOS tries `/dev/rdiskN` when the disk is optical.
