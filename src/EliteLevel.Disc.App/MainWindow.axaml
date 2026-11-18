@@ -346,6 +346,7 @@
                 </Grid>
                 <CheckBox Content="Skip files that already match" IsChecked="{Binding SkipExisting}"/>
                 <CheckBox Content="Include protected paths, copied unchanged" IsChecked="{Binding IncludeProtected}"/>
+                <CheckBox Content="Decompress NCZ entries to NCA" IsChecked="{Binding DecompressNcz}"/>
                 <TextBlock Text="Pattern" Foreground="{StaticResource ElTextMutedBrush}"/>
                 <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44">
                   <TextBox Classes="plain" Text="{Binding Pattern}" Watermark="*.png"/>
@@ -380,7 +381,7 @@
                 <CheckBox Content="Also compute SHA-1" IsChecked="{Binding HashSha1}"/>
                 <CheckBox Content="Also compute MD5" IsChecked="{Binding HashMd5}"/>
                 <TextBlock Text="Nintendo Switch keys" FontSize="17" FontWeight="Bold" Margin="0,8,0,0"/>
-                <TextBlock Text="Optional path to your prod.keys, or a folder that contains prod.keys and title.keys. Discfolio does not include console keys. Without them, an NSP or XCI still opens and the files inside an NCA stay encrypted."
+                <TextBlock Text="Optional path to your prod.keys, or a folder that contains prod.keys and title.keys. Discfolio does not include console keys. Without them, an NSP, XCI, NSZ or XCZ still opens. NCZ entries are decompressed to the stored NCA, and the files inside an NCA stay encrypted."
                            Foreground="{StaticResource ElText2Brush}" TextWrapping="Wrap"/>
                 <Grid ColumnDefinitions="*,Auto">
                   <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44">
@@ -424,7 +425,7 @@
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
                            Text="Discfolio browses disc images and folder dumps you already have. It is read-only: the source is never modified. It does not include encryption keys or game data. Use it only with copies you are allowed to possess."/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
-                           Text="Open an ISO 9660 or Joliet image, an Xbox or Xbox 360 XDVDFS image, a Nintendo Switch NSP or XCI, a folder, or a disc in an optical drive. Switch NCAs are encrypted with keys from your own console. Point Settings at prod.keys to browse inside them. NSZ and XCZ are compressed and are not opened yet. Search by name, copy a SHA-256 hash, and extract files to a folder you choose. Protected paths, including a hidden system-update folder, are skipped unless you include them, and even then they are copied unchanged."/>
+                           Text="Open an ISO 9660 or Joliet image, an Xbox or Xbox 360 XDVDFS image, a Nintendo Switch NSP, XCI, NSZ or XCZ, a folder, or a disc in an optical drive. Switch NCAs are encrypted with keys from your own console. Point Settings at prod.keys to browse inside them. An NSZ or XCZ is opened like an NSP or XCI, and an NCZ entry is read as the decompressed NCA. Search by name, copy a SHA-256 hash, and extract files to a folder you choose. Protected paths, including a hidden system-update folder, are skipped unless you include them, and even then they are copied unchanged."/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
                            Text="Rip to ISO copies the disc a sector at a time and writes SHA-256, SHA-1 and MD5 next to the file. A sector that still fails is stored as zeros and listed. The drive is never written. Audio CD tracks are not supported. PlayStation 3 game data on a disc is encrypted. Xbox game partitions need a drive with flashed firmware; the video partition can still be read."/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
@@ -495,6 +496,7 @@
             </Grid>
             <CheckBox Content="Skip files that already match" IsChecked="{Binding SkipExisting}"/>
             <CheckBox Content="Include protected paths, copied unchanged" IsChecked="{Binding IncludeProtected}"/>
+            <CheckBox Content="Decompress NCZ entries to NCA" IsChecked="{Binding DecompressNcz}"/>
             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
               <Button Classes="el-primary" Content="Extract" Command="{Binding ConfirmExtractCommand}"/>
               <Button Classes="el-secondary" Content="Cancel" Command="{Binding CancelExtractCommand}"/>

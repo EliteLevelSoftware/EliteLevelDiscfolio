@@ -7,6 +7,7 @@ using EliteLevel.Disc.Core.Extract;
 using EliteLevel.Disc.Core.Hash;
 using EliteLevel.Disc.Core.IO;
 using EliteLevel.Disc.Core.Search;
+using EliteLevel.Disc.Core.Formats.Switch;
 using EliteLevel.Disc.Core.Titles;
 
 namespace EliteLevel.Disc.Cli;
@@ -65,6 +66,7 @@ public static class CliHost
         var exclude = new Option<string>("--exclude") { Description = "Skip names matching this glob" };
         var skipExisting = new Option<bool>("--skip-existing") { Description = "Keep a destination file when its size matches" };
         var includeProtected = new Option<bool>("--include-protected") { Description = "Also copy protected paths, still encrypted and unchanged" };
+        var decompress = new Option<bool>("--decompress") { Description = "Write an NCZ entry as the decompressed NCA" };
         var algo = new Option<string>("--algo") { Description = "Comma-separated hashes: sha256, sha1, md5", DefaultValueFactory = _ => "sha256" };
         var manifest = new Option<string>("--manifest") { Description = "Write a hash manifest to this file" };
         var searchPattern = new Argument<string>("pattern") { Description = "Name or glob to find" };
@@ -118,6 +120,7 @@ public static class CliHost
         extract.Options.Add(exclude);
         extract.Options.Add(skipExisting);
         extract.Options.Add(includeProtected);
+        extract.Options.Add(decompress);
         extract.Options.Add(showSystem);
         extract.Options.Add(json);
         extract.Options.Add(discKey);
@@ -134,6 +137,7 @@ public static class CliHost
             result.GetValue(exclude),
             result.GetValue(skipExisting),
             result.GetValue(includeProtected),
+            result.GetValue(decompress),
             result.GetValue(showSystem),
             result.GetValue(json),
             token))));
@@ -216,6 +220,16 @@ public static class CliHost
             result.GetValue(json),
             token));
 
+        var convertOut = new Option<string>("--out") { Description = "Decompressed NSP or XCI to write" };
+        var convert = new Command("convert", "Write an NSZ or XCZ as a decompressed NSP or XCI");
+        convert.Arguments.Add(image);
+        convert.Options.Add(convertOut);
+        convert.Options.Add(json);
+        convert.Options.Add(keys);
+        convert.SetAction((result, token) => WithKeysAsync(
+            result.GetValue(keys),
+            () => ConvertAsync(result.GetValue(image)!, result.GetValue(convertOut), result.GetValue(json), token)));
+
         var root = new RootCommand("EliteLevel Discfolio. Read-only explorer for disc images, folder dumps, and optical drives.");
         root.Subcommands.Add(info);
         root.Subcommands.Add(list);
@@ -227,6 +241,7 @@ public static class CliHost
         root.Subcommands.Add(art);
         root.Subcommands.Add(drives);
         root.Subcommands.Add(rip);
+        root.Subcommands.Add(convert);
         return root;
     }
 
@@ -385,6 +400,7 @@ public static class CliHost
         string? exclude,
         bool skipExisting,
         bool includeProtected,
+        bool decompress,
         bool showSystem,
         bool json,
         CancellationToken cancellationToken)
@@ -404,6 +420,7 @@ public static class CliHost
                 {
                     SkipExisting = skipExisting,
                     IncludeProtected = includeProtected,
+                    Decompress = decompress,
                     Pattern = pattern,
                     Exclude = exclude
                 },
@@ -719,6 +736,75 @@ public static class CliHost
             return WriteError(1, "user", "Cancelled.");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            return WriteError(1, "user", ex.Message);
+        }
+    }
+
+    private static async Task<int> ConvertAsync(string image, string? output, bool json, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(output))
+        {
+            return WriteError(1, "user", "Convert needs --out.");
+        }
+
+        if (OpticalDrives.IsDrivePath(image) || Directory.Exists(image))
+        {
+            return WriteError(1, "user", "Convert reads an NSZ or XCZ file.");
+        }
+
+        var lastPercent = -1;
+        var progress = new Progress<SwitchConvert.ConvertProgress>(update =>
+        {
+            if (json || update.TotalBytes <= 0)
+            {
+                return;
+            }
+
+            var percent = (int)(update.BytesWritten * 100 / update.TotalBytes);
+            if (percent == lastPercent)
+            {
+                return;
+            }
+
+            lastPercent = percent;
+            Console.Error.WriteLine($"Converting {percent}% {update.Current}");
+        });
+
+        try
+        {
+            var result = await SwitchConvert.ConvertAsync(
+                image,
+                output,
+                new OpenOptions { KeysDirectory = KeysPath.Value },
+                progress,
+                cancellationToken).ConfigureAwait(false);
+            if (json)
+            {
+                WriteJson(new
+                {
+                    output = result.OutputPath,
+                    bytes = result.BytesWritten,
+                    sha256 = result.Sha256
+                });
+            }
+            else
+            {
+                Console.WriteLine("Wrote " + result.OutputPath);
+                Console.WriteLine("SHA-256 " + result.Sha256);
+            }
+
+            return 0;
+        }
+        catch (OperationCanceledException)
+        {
+            return WriteError(1, "user", "Cancelled.");
+        }
+        catch (DiscFormatException ex)
+        {
+            return WriteError(2, "unsupported", ex.Message);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or FileNotFoundException)
         {
             return WriteError(1, "user", ex.Message);
         }

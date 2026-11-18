@@ -64,6 +64,34 @@ internal static class Nca
         return IsMagic(header);
     }
 
+    /// <summary>
+    /// The 32-byte AES-XTS key from the key area, when the caller's keys decrypt the header.
+    /// NCZ stores only 16 key bytes per section, so an XTS section is restored with this key.
+    /// </summary>
+    internal static byte[]? TryXtsKey(IByteSource file, SwitchKeys keys)
+    {
+        if (!TryOpen(file, keys, out var header) || HasRights(header))
+        {
+            return null;
+        }
+
+        var material = BodyKeys(header, keys, titleKey: null);
+        if (material.Xts is not { Length: 32 })
+        {
+            return null;
+        }
+
+        foreach (var value in material.Xts)
+        {
+            if (value != 0)
+            {
+                return material.Xts;
+            }
+        }
+
+        return null;
+    }
+
     public static ulong ReadProgramId(ReadOnlySpan<byte> header) => BinaryPrimitives.ReadUInt64LittleEndian(header[ProgramId..]);
 
     public static int MasterKey(ReadOnlySpan<byte> header)

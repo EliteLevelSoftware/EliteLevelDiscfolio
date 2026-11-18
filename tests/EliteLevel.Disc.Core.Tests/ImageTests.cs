@@ -200,11 +200,11 @@ public class ImageTests
         Assert.Equal(DiscFormatException.Unrecognized, message);
         Assert.Contains("ISO 9660/Joliet (including PS3)", message);
         Assert.Contains("Xbox and Xbox 360 XDVDFS", message);
-        Assert.Contains("Nintendo Switch NSP and XCI", message);
+        Assert.Contains("Nintendo Switch NSP, XCI, NSZ and XCZ", message);
         Assert.Contains("folder dumps", message);
         var iso = message.IndexOf("ISO 9660/Joliet (including PS3)", StringComparison.Ordinal);
         var xbox = message.IndexOf("Xbox and Xbox 360 XDVDFS", StringComparison.Ordinal);
-        var sw = message.IndexOf("Nintendo Switch NSP and XCI", StringComparison.Ordinal);
+        var sw = message.IndexOf("Nintendo Switch NSP, XCI, NSZ and XCZ", StringComparison.Ordinal);
         var folder = message.IndexOf("folder dumps", StringComparison.Ordinal);
         Assert.True(iso < xbox && xbox < sw && sw < folder);
 

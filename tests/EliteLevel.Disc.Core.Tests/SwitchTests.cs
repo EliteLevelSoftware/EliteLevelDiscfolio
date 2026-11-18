@@ -291,7 +291,8 @@ public class SwitchTests
         var block = Path.Combine(temp.Path, "block.nsz");
         await File.WriteAllBytesAsync(block, SwitchBuilder.Pfs0(("game.ncz", "compressed"u8.ToArray()), ("note.txt", "plain"u8.ToArray())));
         await using var image = await DiscImages.OpenAsync(block);
-        Assert.Contains("Decompression isn't supported yet", image.Identity.Notice);
+        Assert.Equal("NSZ", image.Identity.FormatDisplayName);
+        Assert.Contains("NCZSECTN", image.Identity.Notice);
         Assert.Equal("plain", await ReadAsync(Find(image.Root, "note.txt")));
         Assert.Equal("compressed", await ReadAsync(Find(image.Root, "game.ncz")));
 
@@ -467,7 +468,7 @@ internal static class SwitchBuilder
         public bool Nca2 { get; init; }
     }
 
-    public sealed record SampleSet(string Nsp, string ProdKeys, byte[] Nca);
+    public sealed record SampleSet(string Nsp, string ProdKeys, byte[] Nca, byte[] SectionKey, byte[] SectionCounter);
 
     public static SampleSet Sample(string directory)
     {
@@ -513,7 +514,9 @@ internal static class SwitchBuilder
         var keysPath = Path.Combine(directory, "prod.keys");
         File.WriteAllBytes(nspPath, nsp);
         File.WriteAllText(keysPath, "header_key = " + Convert.ToHexString(headerKey) + "\nkey_area_key_application_00 = " + Convert.ToHexString(kaek) + "\n");
-        return new SampleSet(nspPath, keysPath, nca);
+        var counter = new byte[16];
+        upper.CopyTo(counter);
+        return new SampleSet(nspPath, keysPath, nca, ctr, counter);
     }
 
     public static byte[] Jpeg() => [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x00, 0xFF, 0xD9];

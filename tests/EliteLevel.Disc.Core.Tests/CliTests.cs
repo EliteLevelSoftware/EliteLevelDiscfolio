@@ -91,7 +91,7 @@ public class CliTests
         Assert.Contains("ISO 9660/Joliet (including PS3)", bad.Stderr);
         Assert.Contains("Xbox and Xbox 360 XDVDFS", bad.Stderr);
         Assert.Contains("folder dumps", bad.Stderr);
-        Assert.Contains("Nintendo Switch NSP and XCI", bad.Stderr);
+        Assert.Contains("Nintendo Switch NSP, XCI, NSZ and XCZ", bad.Stderr);
         Assert.Equal(string.Empty, bad.Stdout);
 
         var usage = await Run("extract", iso);
@@ -121,7 +121,7 @@ public class CliTests
             Assert.Equal("unsupported", error.GetProperty("kind").GetString());
             Assert.Equal(text.Stderr.Trim(), error.GetProperty("message").GetString());
             Assert.Contains("ISO 9660/Joliet (including PS3)", error.GetProperty("message").GetString());
-            Assert.Contains("Nintendo Switch NSP and XCI", error.GetProperty("message").GetString());
+            Assert.Contains("Nintendo Switch NSP, XCI, NSZ and XCZ", error.GetProperty("message").GetString());
         }
 
         var nsp = Path.Combine(temp.Path, "game.nsp");

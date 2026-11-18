@@ -20,7 +20,7 @@ public sealed class Extractor : IExtractor
         var files = new List<IDiscNode>();
         foreach (var node in nodes)
         {
-            Collect(node, files);
+            Collect(node, files, options);
         }
 
         destination.Create();
@@ -84,28 +84,40 @@ public sealed class Extractor : IExtractor
         return new ExtractResult(extracted, skipped, protectedSkipped, bytes);
     }
 
-    private static void Collect(IDiscNode node, List<IDiscNode> files)
+    private static void Collect(IDiscNode node, List<IDiscNode> files, ExtractOptions options)
     {
+        if (node is DiscNode concrete)
+        {
+            if (options.Decompress && concrete.OpenContainer is not null)
+            {
+                files.Add(DiscNode.File(concrete.Name, concrete.FullPath, concrete.ContainerSize, showSystem: false, concrete.OpenContainer));
+                return;
+            }
+
+            if (!concrete.IsDirectory)
+            {
+                files.Add(concrete);
+                return;
+            }
+
+            // Same file set info counts as protected: hidden system-update files included.
+            foreach (var child in concrete.AllChildren)
+            {
+                Collect(child, files, options);
+            }
+
+            return;
+        }
+
         if (!node.IsDirectory)
         {
             files.Add(node);
             return;
         }
 
-        if (node is not DiscNode concrete)
+        foreach (var child in node.Children)
         {
-            foreach (var child in node.Children)
-            {
-                Collect(child, files);
-            }
-
-            return;
-        }
-
-        // Same file set info counts as protected: hidden system-update files included.
-        foreach (var child in NodeWalk.FilesIncludingSystem(concrete))
-        {
-            files.Add(child);
+            Collect(child, files, options);
         }
     }
 

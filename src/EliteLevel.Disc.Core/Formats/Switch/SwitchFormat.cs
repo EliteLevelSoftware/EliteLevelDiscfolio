@@ -4,11 +4,11 @@ using EliteLevel.Disc.Core;
 namespace EliteLevel.Disc.Core.Formats.Switch;
 
 /// <summary>
-/// Nintendo Switch NSP and XCI. Detection uses the container, not the extension.
-/// NSP is a PFS0 ("PFS0" at byte 0). XCI has "HEAD" at 0x100, or at 0x1100 when a
-/// 0x1000-byte key area is still in front, and an HFS0 at the header's partition offset.
-/// NSZ and XCZ are named and refused when the file is compressed. A block NSZ is still a
-/// PFS0; its NCZ entries are listed and not decompressed.
+/// Nintendo Switch NSP, XCI, NSZ and XCZ. Detection uses the container, not the extension.
+/// NSP and NSZ are a PFS0 ("PFS0" at byte 0). XCI and XCZ have "HEAD" at 0x100, or at
+/// 0x1100 when a 0x1000-byte key area is still in front, and an HFS0 at the header's
+/// partition offset. An NSZ is that PFS0 with NCZ entries. An XCZ is that XCI with NCZ
+/// entries. A file that is only a zstd frame is not a container and is refused.
 /// Written from the public XCI, PFS0 and HFS0 layouts. No console keys are included.
 /// </summary>
 public sealed class SwitchFormat : IImageFormat
@@ -17,7 +17,7 @@ public sealed class SwitchFormat : IImageFormat
 
     public string Id => "switch";
     public string DisplayName => "Nintendo Switch";
-    public string SupportPhrase => "Nintendo Switch NSP and XCI";
+    public string SupportPhrase => "Nintendo Switch NSP, XCI, NSZ and XCZ";
 
     public bool CanOpen(Stream probe, ImageHints hints)
     {
@@ -65,7 +65,8 @@ public sealed class SwitchFormat : IImageFormat
 
         if (TryXciRoot(source, out var root))
         {
-            return SwitchImage.OpenXci(source, root, options.ShowSystemUpdate, keys);
+            var kind = IsXczExtension(extension) ? "XCZ" : "XCI";
+            return SwitchImage.OpenXci(source, root, options.ShowSystemUpdate, keys, kind);
         }
 
         if (LooksLikePfs(source))
@@ -73,7 +74,8 @@ public sealed class SwitchFormat : IImageFormat
             var range = new StreamRange(source, new object(), 0, source.Length);
             if (PartitionFs.TryParse(range, 0, source.Length, hashed: false, out _, out _))
             {
-                return SwitchImage.OpenPfs(source, options.ShowSystemUpdate, keys);
+                var kind = IsNszExtension(extension) ? "NSZ" : "NSP";
+                return SwitchImage.OpenPfs(source, options.ShowSystemUpdate, keys, kind);
             }
         }
 
@@ -95,7 +97,7 @@ public sealed class SwitchFormat : IImageFormat
         throw new DiscFormatException("This file has a Switch extension, but it is not an NSP or an XCI.");
     }
 
-    private static bool TryXciRoot(Stream source, out long root)
+    internal static bool TryXciRoot(Stream source, out long root)
     {
         root = 0;
         long headerAt;
@@ -140,7 +142,7 @@ public sealed class SwitchFormat : IImageFormat
         return false;
     }
 
-    private static bool LooksLikePfs(Stream source)
+    internal static bool LooksLikePfs(Stream source)
     {
         Span<byte> header = stackalloc byte[0x10];
         if (!TryRead(source, 0, header) || !header[..4].SequenceEqual("PFS0"u8))
@@ -194,7 +196,11 @@ public sealed class SwitchFormat : IImageFormat
     private static bool IsXciExtension(string? extension) =>
         extension is not null && extension.Equals(".xci", StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsCompressedExtension(string? extension) =>
-        extension is not null
-        && (extension.Equals(".nsz", StringComparison.OrdinalIgnoreCase) || extension.Equals(".xcz", StringComparison.OrdinalIgnoreCase));
+    private static bool IsCompressedExtension(string? extension) => IsNszExtension(extension) || IsXczExtension(extension);
+
+    private static bool IsNszExtension(string? extension) =>
+        extension is not null && extension.Equals(".nsz", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsXczExtension(string? extension) =>
+        extension is not null && extension.Equals(".xcz", StringComparison.OrdinalIgnoreCase);
 }

@@ -105,6 +105,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string locator = "";
     [ObservableProperty] private bool skipExisting;
     [ObservableProperty] private bool includeProtected;
+    [ObservableProperty] private bool decompressNcz;
     [ObservableProperty] private string? pattern;
     [ObservableProperty] private string extractDirectory = "";
     [ObservableProperty] private string extractStatus = "";
@@ -368,6 +369,7 @@ public partial class MainViewModel : ObservableObject
                 {
                     SkipExisting = SkipExisting,
                     IncludeProtected = IncludeProtected,
+                    Decompress = DecompressNcz,
                     Pattern = string.IsNullOrWhiteSpace(Pattern) ? null : Pattern.Trim()
                 },
                 new Progress<ExtractProgress>(progress => ExtractStatus = progress.CurrentPath),
@@ -378,7 +380,7 @@ public partial class MainViewModel : ObservableObject
             _settings.ExtractDirectory = ExtractDirectory;
             Persist();
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or DiscFormatException)
         {
             ExtractStatus = ex.Message;
         }
@@ -1296,7 +1298,7 @@ public partial class MainViewModel : ObservableObject
         var version = typeof(MainViewModel).Assembly.GetName().Version;
         if (version is null)
         {
-            return "0.5.0";
+            return "0.6.0";
         }
 
         return string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{version.Major}.{version.Minor}.{Math.Max(version.Build, 0)}");

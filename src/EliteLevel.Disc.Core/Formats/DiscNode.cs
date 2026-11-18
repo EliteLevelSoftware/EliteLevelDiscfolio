@@ -11,6 +11,8 @@ internal sealed class DiscNode : IDiscNode
     private readonly bool _showSystem;
     private IReadOnlyList<DiscNode> _all = [];
     private long? _size;
+    private Func<Stream>? _openContainer;
+    private long _containerSize;
 
     private DiscNode(string name, string fullPath, bool directory, long length, bool showSystem, Func<Stream>? open)
     {
@@ -46,6 +48,17 @@ internal sealed class DiscNode : IDiscNode
     public IReadOnlyList<IDiscNode> Children => Visible();
 
     internal IReadOnlyList<DiscNode> AllChildren => _all;
+
+    /// <summary>The decompressed NCA, when this node came from an NCZ entry.</summary>
+    internal Func<Stream>? OpenContainer => _openContainer;
+
+    internal long ContainerSize => _containerSize;
+
+    internal void SetContainer(long size, Func<Stream> open)
+    {
+        _containerSize = size;
+        _openContainer = open;
+    }
 
     public Stream OpenRead()
     {

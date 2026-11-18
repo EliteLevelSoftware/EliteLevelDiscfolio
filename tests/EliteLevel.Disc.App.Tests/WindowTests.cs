@@ -14,6 +14,23 @@ namespace EliteLevel.Disc.App.Tests;
 public class WindowTests
 {
     [AvaloniaFact]
+    public void Extract_toggle_decompresses_ncz_entries()
+    {
+        var window = new MainWindow();
+        window.Show();
+        var model = Assert.IsType<MainViewModel>(window.DataContext);
+        Assert.False(model.DecompressNcz);
+        model.Page = "extract";
+        var toggle = window.GetVisualDescendants()
+            .OfType<CheckBox>()
+            .FirstOrDefault(box => box.Content as string == "Decompress NCZ entries to NCA");
+        Assert.NotNull(toggle);
+        toggle.IsChecked = true;
+        Assert.True(model.DecompressNcz);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void Window_opens_on_the_empty_state()
     {
         var window = new MainWindow();

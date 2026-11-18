@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0
+
+- NSZ and XCZ images open like NSP and XCI. An NSZ is a PFS0 whose NCA files are stored as NCZ. An XCZ is an XCI whose NCA files are stored as NCZ. The entries are listed as the decompressed NCA. With the same keys as 0.5.0, RomFS, ExeFS, the title, the title ID, the version and the icon are read from that NCA.
+- An NCZ starts with the original 0x4000-byte NCA header, then an NCZSECTN table. The body is one zstd stream, or an NCZBLOCK table of independent zstd blocks. A block stored at least as large as its plain size is kept raw. Sections encrypted with AES-CTR are compressed decrypted and restored with the key stored in the section record, so the result matches the original NCA without prod.keys. An AES-XTS section is restored the same way when the keys you supplied can read the NCA key area. Without those keys, the XTS body is left as the bytes that were compressed.
+- `extract --decompress` writes an NCZ entry as one decompressed `.nca`. The extract page and the extract dialog have the same toggle. `convert game.nsz --out game.nsp` and `convert game.xcz --out game.xci` write the decompressed container, report progress, and print its SHA-256.
+- A file that is only a zstd frame, or an NSZ or XCZ extension that is not a PFS0 or XCI, is still refused. A truncated or corrupt NCZ says what is wrong, and the other files in the container stay listed. Decompression is streamed and can be cancelled.
+- Zstandard decompression uses ZstdSharp.Port, which is MIT licensed.
+
 ## 0.5.0
 
 - Nintendo Switch NSP and XCI images open and can be browsed. An NSP is a PFS0 container: NCAs, tickets, certificates, and `cnmt.xml` are listed, and those entries extract as stored. An XCI reads the game card header and the HFS0 partitions (`update`, `normal`, `secure`, `logo`, and any others in the root).

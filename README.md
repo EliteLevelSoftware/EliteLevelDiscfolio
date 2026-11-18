@@ -32,7 +32,7 @@ The Linux AppImage is attached when that pack succeeds. macOS (Apple silicon) is
 
 Open an ISO 9660 or Joliet image, an Xbox or Xbox 360 XDVDFS image (plain, XGD1, XGD2, XGD3, or a Redump layout with a video partition in front), a Nintendo Switch NSP or XCI, or a folder dump. Detection uses the contents of the file, not the extension.
 
-An NSP is a PFS0 container. Discfolio lists the NCAs, tickets, certificates, and `cnmt.xml` when that file is present, and can copy those entries out unchanged. An XCI is a game card: the header is read, then the HFS0 partitions (`update`, `normal`, `secure`, `logo`, and any others present). A compressed NSZ or XCZ is recognized. Decompression is not supported yet, so a solid archive is refused and an NCZ entry inside a container is listed but not opened.
+An NSP is a PFS0 container. Discfolio lists the NCAs, tickets, certificates, and `cnmt.xml` when that file is present, and can copy those entries out unchanged. An XCI is a game card: the header is read, then the HFS0 partitions (`update`, `normal`, `secure`, `logo`, and any others present). An NSZ is a PFS0 of NCZ files, and an XCZ is an XCI of NCZ files. Each NCZ is shown as the decompressed NCA. The body is a zstd stream, or independent zstd blocks. AES-CTR sections are restored with the key stored in the NCZ record, so the bytes match the original NCA. An AES-XTS section is restored the same way when your keys can read the NCA key area.
 
 NCA contents are encrypted with console keys. Discfolio does not include keys. Set the path to your own `prod.keys` in Settings, or pass `--keys` on the command line. `title.keys` in the same folder is used too. With those keys, NCA headers are decrypted and the RomFS and ExeFS trees can be browsed and extracted. The title, title ID, and version come from the NACP control data, and `icon_AmericanEnglish.dat` is the library icon. Without keys, the container still opens and the window explains that the keys have to come from your own console.
 
@@ -56,7 +56,7 @@ PlayStation 3 game data on a disc is encrypted. A normal drive can list the file
 
 ## Extract
 
-Copy the selection or the whole image to a folder you choose. Skip-existing treats a destination file of the same size as success, so extracting again into the same folder is safe. The source image is opened read-only and is never rewritten.
+Copy the selection or the whole image to a folder you choose. Skip-existing treats a destination file of the same size as success, so extracting again into the same folder is safe. The source image is opened read-only and is never rewritten. Decompress NCZ entries to NCA writes each compressed entry as one `.nca` instead of the files inside it. `convert` does that for the whole NSZ or XCZ and writes an NSP or XCI.
 
 `EBOOT.BIN`, `PS3_UPDATE`, `LICDIR`, and `$SystemUpdate` are skipped unless you explicitly include protected paths. That copy is still the original bytes.
 
@@ -82,6 +82,9 @@ discfolio search game.iso ICON0
 discfolio info game.nsp --keys ./prod.keys
 discfolio list game.xci --keys ./prod.keys --long
 discfolio extract game.nsp --keys ./prod.keys --out ./out --skip-existing
+discfolio extract game.nsz --keys ./prod.keys --decompress --out ./out
+discfolio convert game.nsz --out game.nsp
+discfolio convert game.xcz --out game.xci
 discfolio art game.nsp --keys ./prod.keys --out ./art
 ```
 
@@ -94,7 +97,7 @@ discfolio art game.nsp --keys ./prod.keys --out ./art
   "error": {
     "code": 2,
     "kind": "unsupported",
-    "message": "This file is a compressed Nintendo Switch image (NSZ or XCZ). Decompression isn't supported yet."
+    "message": "This file is not an NSZ or XCZ container. An NSZ is a PFS0 of NCZ files and an XCZ is an XCI of NCZ files."
   }
 }
 ```

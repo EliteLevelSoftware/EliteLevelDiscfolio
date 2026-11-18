@@ -57,6 +57,9 @@ public sealed class ExtractOptions
     public bool VerifyHash { get; init; }
     public string? Pattern { get; init; }
     public string? Exclude { get; init; }
+
+    /// <summary>Write an NCZ entry as one decompressed NCA instead of the files inside it.</summary>
+    public bool Decompress { get; init; }
 }
 
 public sealed record ImageIdentity(
@@ -141,9 +144,9 @@ public sealed class DiscFormatException : Exception
     /// <summary>A file that matched none of the registered readers.</summary>
     public static string Unrecognized => DiscImages.UnsupportedFileMessage;
 
-    /// <summary>An NSZ or XCZ container. The compressed bytes are not opened.</summary>
+    /// <summary>A file named like NSZ or XCZ that is not a PFS0 or XCI of NCZ entries.</summary>
     public const string SwitchCompressed =
-        "This file is a compressed Nintendo Switch image (NSZ or XCZ). Decompression isn't supported yet.";
+        "This file is not an NSZ or XCZ container. An NSZ is a PFS0 of NCZ files and an XCZ is an XCI of NCZ files.";
 
     public DiscFormatException(string message) : base(message)
     {

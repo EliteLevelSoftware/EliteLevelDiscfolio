@@ -48,6 +48,9 @@ dotnet run --project src/EliteLevel.Disc.Cli -- hash game.iso --manifest game.sh
 dotnet run --project src/EliteLevel.Disc.Cli -- search game.iso ICON0
 dotnet run --project src/EliteLevel.Disc.Cli -- info game.nsp --keys ./prod.keys
 dotnet run --project src/EliteLevel.Disc.Cli -- list game.xci --keys ./prod.keys --long
+dotnet run --project src/EliteLevel.Disc.Cli -- extract game.nsz --keys ./prod.keys --decompress --out ./out
+dotnet run --project src/EliteLevel.Disc.Cli -- convert game.nsz --out game.nsp
+dotnet run --project src/EliteLevel.Disc.Cli -- convert game.xcz --out game.xci
 dotnet run --project src/EliteLevel.Disc.Cli -- art game.nsp --keys ./prod.keys --out ./art
 ```
 
@@ -69,7 +72,7 @@ Exit codes:
   "error": {
     "code": 2,
     "kind": "unsupported",
-    "message": "This file is a compressed Nintendo Switch image (NSZ or XCZ). Decompression isn't supported yet."
+    "message": "This file is not an NSZ or XCZ container. An NSZ is a PFS0 of NCZ files and an XCZ is an XCI of NCZ files."
   }
 }
 ```
@@ -80,7 +83,7 @@ Without `--json`, the same message is written to standard error.
 
 `art --out <folder>` writes the icon and banner into that folder as `icon.png` (or the matching image extension) and `banner.png`. The folder is the only place those files are written. If the image has no title art, the command exits 1.
 
-An unrecognized file names the readers this version has: ISO 9660/Joliet (including PS3), Xbox and Xbox 360 XDVDFS, Nintendo Switch NSP and XCI, and folder dumps. A compressed NSZ or XCZ is a different message and still exits 2. A Switch NSP or XCI without keys exits 0; the notice says keys have to come from your own console.
+An unrecognized file names the readers this version has: ISO 9660/Joliet (including PS3), Xbox and Xbox 360 XDVDFS, Nintendo Switch NSP, XCI, NSZ and XCZ, and folder dumps. A file that is only a zstd frame, or that has an NSZ or XCZ extension but is not a PFS0 or XCI, is a different message and still exits 2. An NSZ or XCZ container exits 0. `extract --decompress` writes each NCZ as a decompressed `.nca`. `convert <file.nsz> --out <file.nsp>` (and the XCZ to XCI form) writes the decompressed container, prints progress, and prints its SHA-256. A Switch image without keys exits 0; the notice says keys have to come from your own console.
 
 ## Tests
 

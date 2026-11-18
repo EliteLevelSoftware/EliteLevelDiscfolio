@@ -7,7 +7,7 @@ EliteLevel Discfolio is for people who already have a legal copy of a game and a
 - No encryption keys and no game content are bundled, in the repository or in a release.
 - PlayStation 3 paths such as `EBOOT.BIN`, `PS3_UPDATE`, and `LICDIR` are skipped by the default extract. An explicit option can copy those bytes out unchanged. That is a copy, not a decryption.
 - Xbox and Xbox 360 images are read as XDVDFS file systems. Retail executables are not decrypted.
-- Nintendo Switch NSP and XCI containers can be listed without keys. NCA contents are decrypted only with `prod.keys` and `title.keys` you supply from your own console. No keys are bundled. Tickets and certificates are copied as stored. Compressed NSZ and XCZ images are not decompressed.
+- Nintendo Switch NSP, XCI, NSZ and XCZ containers can be listed without keys. An NCZ entry is decompressed to the stored NCA. AES-CTR sections are restored with the key stored in the NCZ section record. NCA contents are decrypted only with `prod.keys` and `title.keys` you supply from your own console. No keys are bundled. Tickets and certificates are copied as stored.
 - PlayStation, Xbox, Nintendo, and related names are trademarks of their owners. Elite Level Software is not affiliated with them.
 
 Bug reports that ask for keys, circumvention, or copyrighted test files will be closed. Those files are not accepted in pull requests.
