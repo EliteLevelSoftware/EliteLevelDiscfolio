@@ -9,6 +9,9 @@ by Elite Level Software
 [![License: MIT](https://img.shields.io/badge/license-MIT-b48c28)](LICENSE)
 [![.NET](https://img.shields.io/badge/.NET-10-512bd4)](https://dotnet.microsoft.com/)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-3a3335)](#download)
+[![Release](https://img.shields.io/github/v/release/EliteLevelSoftware/EliteLevelDiscfolio?color=b48c28)](https://github.com/EliteLevelSoftware/EliteLevelDiscfolio/releases)
+[![Downloads](https://img.shields.io/github/downloads/EliteLevelSoftware/EliteLevelDiscfolio/total?color=b48c28&label=downloads)](https://github.com/EliteLevelSoftware/EliteLevelDiscfolio/releases)
+[![Downloads (latest)](https://img.shields.io/github/downloads/EliteLevelSoftware/EliteLevelDiscfolio/latest/total?color=b48c28&label=latest%20release)](https://github.com/EliteLevelSoftware/EliteLevelDiscfolio/releases/latest)
 
 A read-only explorer for console disc images and folder dumps.
 
