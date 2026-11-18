@@ -121,7 +121,12 @@ public partial class MainWindow : EliteLevel.Avalonia.Controls.EliteWindow
             return;
         }
 
-        var path = item.Tag as string;
+        var path = (item.DataContext as RecentItem)?.Path;
+        if (string.IsNullOrEmpty(path))
+        {
+            path = item.Tag as string;
+        }
+
         if (string.IsNullOrEmpty(path) && item.Parent is ContextMenu { PlacementTarget: Control target })
         {
             path = target.Tag as string;

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Right-click Remove from library on a library tile, and on the open images list, removes that entry and its cached art. The image file is left in place.
+
 ## 0.3.0
 
 - A library entry can be removed from the tile menu or the side card. That deletes the entry and its cached art and metadata. The image file is left in place. Clear missing drops entries whose file is no longer there.
