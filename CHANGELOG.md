@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The window, taskbar, and release packages use the new Elite Level icon.
 - The window, cards and controls use the warm oxblood surfaces and 1px red-brown frames. Each view keeps a single gold primary button. Remove from library and Clear missing use danger text on a neutral button.
 - The status bar and the About dialog read Discfolio, the assembly version, and "by Elite Level Software".
 

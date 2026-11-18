@@ -51,7 +51,7 @@ The release description starts with a Download table for the three installers, t
 
 The macOS job runs on `macos-latest`. That image's `/bin/bash` is bash 3.2, and the script uses `set -u`. On bash 3.2, expanding an empty array (`"${name[@]}"`) is an unbound variable. A stable tag left `pre` empty, so the job exited with `pre[@]: unbound variable` before `vpk` ran. `continue-on-error` still marked the release workflow successful, and v0.4.0 shipped with no macOS files. The script now keeps each `vpk` argument list non-empty and appends `--pre` only for a prerelease tag.
 
-`vpk` 1.2.161 builds the `.app` bundle and accepts only an `.icns` icon. The file is `src/EliteLevel.Disc.App/Assets/icon.icns`, the 128×128 `icon.png` stored as an `ic07` image. It is not an Avalonia resource. A PNG is rejected. Before upload, the job checks for `Discfolio-<version>-osx-arm64-<track>-full.nupkg`, `releases.osx-arm64-<track>.json`, and the setup pkg, then renames the pkg. A portable zip or a delta package fails the job.
+`vpk` 1.2.161 builds the `.app` bundle and accepts only an `.icns` icon. The file is `src/EliteLevel.Disc.App/Assets/icon.icns`, the same full set as `assets/branding/discfolio.icns` (16 through 1024). It is not an Avalonia resource. A PNG is rejected. Before upload, the job checks for `Discfolio-<version>-osx-arm64-<track>-full.nupkg`, `releases.osx-arm64-<track>.json`, and the setup pkg, then renames the pkg. A portable zip or a delta package fails the job.
 
 The hosted runner has no Apple Developer identity, so the pkg and the app are unsigned and not notarized. Gatekeeper asks before the app opens. Signing needs a Developer ID and a notary profile, which this workflow does not have.
 
