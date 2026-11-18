@@ -3,10 +3,9 @@
 The tag workflow builds the app, packs it with [Velopack](https://github.com/velopack/velopack), and publishes a GitHub release. Do the steps below on `main` after the version you want is merged.
 
 1. Set `<Version>` in `Directory.Build.props` to `X.Y.Z`.
-2. Set the WiX package `Version` in `installer/wix/Discfolio.wxs` to `X.Y.Z.0`.
-3. Add a `CHANGELOG.md` section headed `## X.Y.Z`. The release notes are that section.
-4. Commit those changes.
-5. Tag `vX.Y.Z` and push the tag.
+2. Add a `CHANGELOG.md` section headed `## X.Y.Z`. The release notes are that section.
+3. Commit those changes.
+4. Tag `vX.Y.Z` and push the tag.
 
 ```text
 git tag vX.Y.Z
@@ -30,7 +29,7 @@ The setup program installs per user to `%LocalAppData%\Discfolio`. It adds Start
 
 The Windows channel is `win-x64-stable` or `win-x64-prerelease`. Linux uses `linux-x64-stable` or `linux-x64-prerelease`. macOS uses `osx-arm64-stable` or `osx-arm64-prerelease`. Windows is required. The Linux and macOS packs are best-effort and do not block the Windows release.
 
-CI on pull requests also runs `vpk pack` for Windows and does not upload. The portable single-file publish and the WiX MSI stay on that CI job.
+CI on pull requests also runs `vpk pack` for Windows and does not upload. The version packed there is the `<Version>` in `Directory.Build.props`. The tag workflow packs the version from the tag.
 
 ## Updates
 

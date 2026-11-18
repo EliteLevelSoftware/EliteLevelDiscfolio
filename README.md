@@ -18,13 +18,11 @@ A read-only explorer for console disc images and folder dumps.
 
 </div>
 
-## Install
+## Download
 
-Download the latest release from [GitHub releases](https://github.com/EliteLevelSoftware/EliteLevelDiscfolio/releases).
+Windows builds are on the [releases](https://github.com/EliteLevelSoftware/EliteLevelDiscfolio/releases) page: `Setup.exe`, the portable zip, and `SHA256SUMS.txt`.
 
-On Windows, run the setup program. It installs per user to `%LocalAppData%\Discfolio`, adds Start Menu and Desktop shortcuts, and registers in Installed apps. It does not need administrator rights. Uninstall from Installed apps; that removes the program, the shortcuts, and the registry entry. A portable zip is on the same release if you would rather not install.
-
-`SHA256SUMS.txt` on the release lists the SHA-256 digest of each file.
+`Setup.exe` installs per user to `%LocalAppData%\Discfolio`, adds Start Menu and Desktop shortcuts, and registers in Installed apps. It does not need administrator rights. Uninstall from Installed apps. The portable zip runs without installing. `SHA256SUMS.txt` is the SHA-256 digest of each file on that release.
 
 Discfolio checks those public releases for updates when it starts. That check is on by default and can be turned off under Settings. Check now is there too, along with the channel: stable or prerelease. When an update is available, a notice downloads it in the background. Discfolio restarts only after you choose OK. The public releases need no token.
 

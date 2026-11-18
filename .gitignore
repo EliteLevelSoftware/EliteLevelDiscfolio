@@ -9,6 +9,12 @@ TestResults/
 *.iso
 *.xiso
 *.xgd
+*.nsp
+*.xci
+*.xex
+*.xbe
+*.pkg
+*.sfo
 prod.keys
 title.keys
 *.tik

@@ -6,6 +6,7 @@
 - Long titles wrap to two lines on the side card, the hero, and the tiles. The full title is on the tooltip.
 - Settings can check for updates on startup, or check now. The channel is stable or prerelease. An update notice downloads in the background and restarts only after you choose OK.
 - Windows releases are packed with Velopack. The setup program installs per user to `%LocalAppData%\Discfolio`, adds Start Menu and Desktop shortcuts, uses the Discfolio icon, and uninstalls from Installed apps. The portable zip, full package, and delta package (when a previous release exists) are published with it. The app reads the public GitHub releases. No token is required.
+- The download page points at those GitHub release files: Setup.exe, the portable zip, and SHA256SUMS.txt. The window screenshot matches this version. The separate WiX installer is no longer built.
 
 ## 0.2.1
 
