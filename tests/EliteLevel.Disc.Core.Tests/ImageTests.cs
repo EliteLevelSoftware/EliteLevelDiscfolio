@@ -200,13 +200,13 @@ public class ImageTests
         Assert.Equal(DiscFormatException.Unrecognized, message);
         Assert.Contains("ISO 9660/Joliet (including PS3)", message);
         Assert.Contains("Xbox and Xbox 360 XDVDFS", message);
+        Assert.Contains("Nintendo Switch NSP and XCI", message);
         Assert.Contains("folder dumps", message);
-        Assert.DoesNotContain("NSP", message, StringComparison.Ordinal);
-        Assert.DoesNotContain("XCI", message, StringComparison.Ordinal);
         var iso = message.IndexOf("ISO 9660/Joliet (including PS3)", StringComparison.Ordinal);
         var xbox = message.IndexOf("Xbox and Xbox 360 XDVDFS", StringComparison.Ordinal);
+        var sw = message.IndexOf("Nintendo Switch NSP and XCI", StringComparison.Ordinal);
         var folder = message.IndexOf("folder dumps", StringComparison.Ordinal);
-        Assert.True(iso < xbox && xbox < folder);
+        Assert.True(iso < xbox && xbox < sw && sw < folder);
 
         foreach (var format in DiscImages.RegisteredFormats)
         {
@@ -222,7 +222,8 @@ public class ImageTests
         ]);
         Assert.Contains("ISO 9660/Joliet (including PS3)", withSwitch, StringComparison.Ordinal);
         Assert.Contains("folder dumps", withSwitch, StringComparison.Ordinal);
-        Assert.EndsWith("or Nintendo Switch NSP and XCI.", withSwitch, StringComparison.Ordinal);
+        Assert.Contains("Nintendo Switch NSP and XCI", withSwitch, StringComparison.Ordinal);
+        Assert.EndsWith("or folder dumps.", withSwitch, StringComparison.Ordinal);
         Assert.DoesNotContain("Xbox", withSwitch, StringComparison.Ordinal);
     }
 
@@ -236,31 +237,9 @@ public class ImageTests
     }
 
     [Fact]
-    public async Task Switch_containers_are_named_and_refused()
+    public async Task Switch_extension_does_not_hide_an_iso()
     {
         using var temp = new TempDir();
-        var nsp = Path.Combine(temp.Path, "game.nsp");
-        await File.WriteAllBytesAsync(nsp, "PFS0"u8.ToArray().Concat(new byte[32]).ToArray());
-        var nspError = await Assert.ThrowsAsync<DiscFormatException>(() => DiscImages.OpenAsync(nsp));
-        Assert.Equal(DiscFormatException.SwitchUnsupported, nspError.Message);
-
-        var renamed = Path.Combine(temp.Path, "archive.bin");
-        await File.WriteAllBytesAsync(renamed, "PFS0"u8.ToArray().Concat(new byte[16]).ToArray());
-        var renamedError = await Assert.ThrowsAsync<DiscFormatException>(() => DiscImages.OpenAsync(renamed));
-        Assert.Equal(DiscFormatException.SwitchUnsupported, renamedError.Message);
-
-        var xci = new byte[0x120];
-        "HEAD"u8.CopyTo(xci.AsSpan(0x100));
-        var xciPath = Path.Combine(temp.Path, "card.bin");
-        await File.WriteAllBytesAsync(xciPath, xci);
-        var xciError = await Assert.ThrowsAsync<DiscFormatException>(() => DiscImages.OpenAsync(xciPath));
-        Assert.Equal(DiscFormatException.SwitchUnsupported, xciError.Message);
-
-        var extensionOnly = Path.Combine(temp.Path, "short.xci");
-        await File.WriteAllBytesAsync(extensionOnly, new byte[16]);
-        var extensionError = await Assert.ThrowsAsync<DiscFormatException>(() => DiscImages.OpenAsync(extensionOnly));
-        Assert.Equal(DiscFormatException.SwitchUnsupported, extensionError.Message);
-
         var isoPath = Path.Combine(temp.Path, "actually-an-iso.nsp");
         var builder = new CDBuilder { UseJoliet = true, VolumeIdentifier = "NORTHWIND" };
         builder.AddFile("readme.txt", Encoding.ASCII.GetBytes("hello"));

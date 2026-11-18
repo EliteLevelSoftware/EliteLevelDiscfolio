@@ -30,7 +30,11 @@ The Linux AppImage is attached when that pack succeeds. macOS (Apple silicon) is
 
 ## Browse
 
-Open an ISO 9660 or Joliet image, an Xbox or Xbox 360 XDVDFS image (plain, XGD1, XGD2, XGD3, or a Redump layout with a video partition in front), or a folder dump. Detection uses the contents of the file, not the extension. A Nintendo Switch NSP or XCI is recognized and refused. Switch images are not supported yet.
+Open an ISO 9660 or Joliet image, an Xbox or Xbox 360 XDVDFS image (plain, XGD1, XGD2, XGD3, or a Redump layout with a video partition in front), a Nintendo Switch NSP or XCI, or a folder dump. Detection uses the contents of the file, not the extension.
+
+An NSP is a PFS0 container. Discfolio lists the NCAs, tickets, certificates, and `cnmt.xml` when that file is present, and can copy those entries out unchanged. An XCI is a game card: the header is read, then the HFS0 partitions (`update`, `normal`, `secure`, `logo`, and any others present). A compressed NSZ or XCZ is recognized. Decompression is not supported yet, so a solid archive is refused and an NCZ entry inside a container is listed but not opened.
+
+NCA contents are encrypted with console keys. Discfolio does not include keys. Set the path to your own `prod.keys` in Settings, or pass `--keys` on the command line. `title.keys` in the same folder is used too. With those keys, NCA headers are decrypted and the RomFS and ExeFS trees can be browsed and extracted. The title, title ID, and version come from the NACP control data, and `icon_AmericanEnglish.dat` is the library icon. Without keys, the container still opens and the window explains that the keys have to come from your own console.
 
 The window shows the title, the file tree, and recent images on this machine. A PlayStation 3 image uses the title and title ID from `PARAM.SFO`, `ICON0.PNG` on the library tile, and `PIC1.PNG` (or `PIC0.PNG`) on the banner. Xbox 360 reads the title and title ID from `default.xex`, including the embedded title image, and `nxeart` when that file is present. Original Xbox reads the certificate and `$$XTIMAGE` section of `default.xbe` when that section holds a PNG or JPEG. Those files are recognised at the image root or up to two folders down. Anything else keeps the volume label. A plain ISO can also use an `autorun.inf` icon when that line points at an image file rather than an executable resource.
 
@@ -75,10 +79,13 @@ discfolio list game.iso --path /PS3_GAME/USRDIR --long
 discfolio extract game.iso --out ./out --pattern "*.png" --skip-existing
 discfolio hash game.iso --manifest game.sha256
 discfolio search game.iso ICON0
-discfolio art game.iso --out ./art
+discfolio info game.nsp --keys ./prod.keys
+discfolio list game.xci --keys ./prod.keys --long
+discfolio extract game.nsp --keys ./prod.keys --out ./out --skip-existing
+discfolio art game.nsp --keys ./prod.keys --out ./art
 ```
 
-`drives` lists optical drives that have a disc. `--json` works on that command too. `info`, `list` (also `ls`), `extract` and `art` accept a drive in place of an image. `rip` writes the ISO and the three hash files next to it. `--retries` is how many times each sector is read before it is reported as bad. `--disc-key` loads a `.ird` or a key file and does not print the key.
+`drives` lists optical drives that have a disc. `--json` works on that command too. `info`, `list` (also `ls`), `extract` and `art` accept a drive in place of an image. `rip` writes the ISO and the three hash files next to it. `--retries` is how many times each sector is read before it is reported as bad. `--disc-key` loads a `.ird` or a key file and does not print the key. `--keys` points at your `prod.keys`, or at a folder that also holds `title.keys`. The key material is not printed.
 
 `--json` prints indented JSON on standard output, including failures. A failure looks like this, and the process exit code is unchanged:
 
@@ -87,12 +94,12 @@ discfolio art game.iso --out ./art
   "error": {
     "code": 2,
     "kind": "unsupported",
-    "message": "This file is a Nintendo Switch image (NSP or XCI). Switch images aren't supported yet."
+    "message": "This file is a compressed Nintendo Switch image (NSZ or XCZ). Decompression isn't supported yet."
   }
 }
 ```
 
-Exit codes are `0` success, `1` user error (`kind` is `user`), `2` unsupported image (`kind` is `unsupported`), and `3` reserved for a later release that needs keys (`kind` would be `needs-keys`).
+Exit codes are `0` success, `1` user error (`kind` is `user`), `2` unsupported image (`kind` is `unsupported`), and `3` reserved for a later release (`kind` would be `needs-keys`). A Switch container without keys still opens; the missing keys are reported in the notice, not as an error.
 
 `info` reports the title, title ID, version and which art was found, then the visible file count. When the default extract will skip protected paths, that line also reports them, for example `22 files, plus 150 protected system entries skipped on extract`. The extra number includes files under a hidden `$SystemUpdate` folder. `extract` uses the same definition for its protected count. `art --out` writes `icon` and `banner` files into the folder you name. See [docs/user-guide.md](docs/user-guide.md).
 

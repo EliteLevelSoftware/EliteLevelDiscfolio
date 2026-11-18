@@ -22,6 +22,9 @@ public sealed class AppSettings
     /// </summary>
     public string? UpdateToken { get; set; }
 
+    /// <summary>Path to prod.keys, or a folder that contains prod.keys and title.keys. Never a key itself.</summary>
+    public string? SwitchKeys { get; set; }
+
     public List<RecentRecord> Recent { get; set; } = [];
 }
 

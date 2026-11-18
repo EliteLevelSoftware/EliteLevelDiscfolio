@@ -29,8 +29,8 @@ public sealed class ImageHints
 }
 
 /// <summary>
-/// Options for opening an image. Key material is never stored here in this milestone;
-/// the property exists so a later Switch backend can use the same options object.
+/// Options for opening an image. A keys path is not itself a secret.
+/// The file it names is read only to decrypt an NCA the caller already has, and it is never logged.
 /// </summary>
 public sealed class OpenOptions
 {
@@ -40,8 +40,14 @@ public sealed class OpenOptions
     /// <summary>ISO 9660 multi-extent files are presented as one stream.</summary>
     public bool MergeMultiExtent { get; init; } = true;
 
-    /// <summary>Reserved for a later keys folder. Never logged.</summary>
+    /// <summary>
+    /// Path to a prod.keys file, or a folder that contains prod.keys and title.keys.
+    /// Discfolio does not include console keys.
+    /// </summary>
     public string? KeysDirectory { get; init; }
+
+    /// <summary>File name used when a container is identified by its extension. Not a full path.</summary>
+    public string? DisplayName { get; init; }
 }
 
 public sealed class ExtractOptions
@@ -135,9 +141,9 @@ public sealed class DiscFormatException : Exception
     /// <summary>A file that matched none of the registered readers.</summary>
     public static string Unrecognized => DiscImages.UnsupportedFileMessage;
 
-    /// <summary>An NSP or XCI container. This build can name it and cannot read it.</summary>
-    public const string SwitchUnsupported =
-        "This file is a Nintendo Switch image (NSP or XCI). Switch images aren't supported yet.";
+    /// <summary>An NSZ or XCZ container. The compressed bytes are not opened.</summary>
+    public const string SwitchCompressed =
+        "This file is a compressed Nintendo Switch image (NSZ or XCZ). Decompression isn't supported yet.";
 
     public DiscFormatException(string message) : base(message)
     {

@@ -29,11 +29,11 @@ public sealed class TitleArtCache
         _directory = directory;
     }
 
-    public CachedTitle? TryGet(string imagePath)
+    public CachedTitle? TryGet(string imagePath, string? variant = null)
     {
         try
         {
-            var key = Fingerprint(imagePath);
+            var key = Fingerprint(imagePath, variant);
             if (key is null)
             {
                 return null;
@@ -60,12 +60,12 @@ public sealed class TitleArtCache
         }
     }
 
-    public CachedTitle Store(string imagePath, TitleMetadata metadata)
+    public CachedTitle Store(string imagePath, TitleMetadata metadata, string? variant = null)
     {
         var memory = MemoryCopy(metadata);
         try
         {
-            var key = Fingerprint(imagePath);
+            var key = Fingerprint(imagePath, variant);
             if (key is null)
             {
                 return memory;
@@ -338,7 +338,7 @@ public sealed class TitleArtCache
         }
     }
 
-    private static string? Fingerprint(string path)
+    private static string? Fingerprint(string path, string? variant = null)
     {
         string? full;
         long length;
@@ -363,6 +363,11 @@ public sealed class TitleArtCache
         }
 
         var text = string.Create(CultureInfo.InvariantCulture, $"{SchemaVersion}\n{full}\n{length}\n{ticks}");
+        if (!string.IsNullOrEmpty(variant))
+        {
+            text += "\n" + variant;
+        }
+
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text))).ToLowerInvariant();
     }
 

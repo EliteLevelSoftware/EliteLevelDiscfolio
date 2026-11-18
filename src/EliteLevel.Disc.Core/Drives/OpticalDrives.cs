@@ -500,7 +500,9 @@ public static class OpticalDrives
 
     internal static Exception ExplainFormat(string id, DiscFormatException ex)
     {
-        if (ex.Message == DiscFormatException.SwitchUnsupported)
+        if (ex.Message == DiscFormatException.SwitchCompressed
+            || ex.Message.StartsWith("This file looks like a Nintendo Switch", StringComparison.Ordinal)
+            || ex.Message.StartsWith("This file has a Switch extension", StringComparison.Ordinal))
         {
             return ex;
         }

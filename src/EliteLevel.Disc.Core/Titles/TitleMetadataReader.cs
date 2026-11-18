@@ -1,4 +1,5 @@
 using System.Text;
+using EliteLevel.Disc.Core.Formats.Switch;
 
 namespace EliteLevel.Disc.Core.Titles;
 
@@ -27,6 +28,11 @@ public static class TitleMetadataReader
             if (TryOriginalXbox(root, out var xbox))
             {
                 return xbox;
+            }
+
+            if (TrySwitch(image, root, out var switchTitle))
+            {
+                return switchTitle;
             }
 
             return IsoFallback(root);
@@ -213,6 +219,161 @@ public static class TitleMetadataReader
         };
         return title is not null || titleId is not null || icon is not null;
     }
+
+    private static bool TrySwitch(IDiscImage image, IDiscNode root, out TitleMetadata metadata)
+    {
+        metadata = TitleMetadata.Empty;
+        var nacpNode = DiscRead.FindFile(root, "control.nacp");
+        string? title = null;
+        string? version = null;
+        if (nacpNode is not null)
+        {
+            var nacp = DiscRead.Bytes(nacpNode, 64 * 1024);
+            if (nacp is not null)
+            {
+                Nacp.TryRead(nacp, out title, out version);
+            }
+        }
+
+        var iconNode = DiscRead.FindFile(root, "icon_AmericanEnglish.dat") ?? FindIcon(root);
+        byte[]? icon = null;
+        string? iconName = null;
+        if (iconNode is not null)
+        {
+            var bytes = DiscRead.Bytes(iconNode, DiscRead.ImageCap);
+            icon = bytes is null ? null : ImageSniff.AsImage(bytes);
+            if (icon is not null)
+            {
+                iconName = iconNode.Name;
+            }
+        }
+
+        var titleId = image.Identity.FormatId == "switch" ? (image as ISwitchTitle)?.TitleId : null;
+        if (!IsTitleId(titleId) && (image.Identity.FormatId is "switch" or "folder" || nacpNode is not null))
+        {
+            titleId = TitleIdFromNames(root);
+        }
+
+        if (title is null && version is null && icon is null && titleId is null)
+        {
+            return false;
+        }
+
+        metadata = new TitleMetadata
+        {
+            Title = title,
+            TitleId = titleId,
+            Version = version,
+            Icon = icon,
+            IconName = iconName
+        };
+        return true;
+    }
+
+    private static IDiscNode? FindIcon(IDiscNode node)
+    {
+        foreach (var child in node.Children)
+        {
+            if (!child.IsDirectory && child.Name.StartsWith("icon_", StringComparison.OrdinalIgnoreCase) && child.Name.EndsWith(".dat", StringComparison.OrdinalIgnoreCase))
+            {
+                return child;
+            }
+
+            if (child.IsDirectory)
+            {
+                var found = FindIcon(child);
+                if (found is not null)
+                {
+                    return found;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static string? TitleIdFromNames(IDiscNode node)
+    {
+        foreach (var child in node.Children)
+        {
+            if (!child.IsDirectory)
+            {
+                var fromXml = CnmtId(child);
+                if (fromXml is not null)
+                {
+                    return fromXml;
+                }
+
+                var stem = Path.GetFileNameWithoutExtension(child.Name);
+                if (child.Name.EndsWith(".cnmt.xml", StringComparison.OrdinalIgnoreCase))
+                {
+                    stem = Path.GetFileNameWithoutExtension(stem);
+                }
+
+                if (IsTitleId(stem) && (child.Name.EndsWith(".tik", StringComparison.OrdinalIgnoreCase)
+                    || child.Name.EndsWith(".cnmt", StringComparison.OrdinalIgnoreCase)
+                    || child.Name.EndsWith(".cert", StringComparison.OrdinalIgnoreCase)))
+                {
+                    return stem.ToUpperInvariant();
+                }
+            }
+            else
+            {
+                var nested = TitleIdFromNames(child);
+                if (nested is not null)
+                {
+                    return nested;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static string? CnmtId(IDiscNode node)
+    {
+        if (!node.Name.EndsWith(".cnmt.xml", StringComparison.OrdinalIgnoreCase) && !node.Name.Equals("cnmt.xml", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var bytes = DiscRead.Bytes(node, 256 * 1024);
+        if (bytes is null)
+        {
+            return null;
+        }
+
+        var text = Encoding.UTF8.GetString(bytes);
+        var search = 0;
+        while (search < text.Length)
+        {
+            var start = text.IndexOf("<Id>", search, StringComparison.OrdinalIgnoreCase);
+            if (start < 0)
+            {
+                return null;
+            }
+
+            start += 4;
+            var end = text.IndexOf('<', start);
+            if (end < 0)
+            {
+                return null;
+            }
+
+            var value = text[start..end].Trim();
+            if (IsTitleId(value))
+            {
+                return value.ToUpperInvariant();
+            }
+
+            search = end;
+        }
+
+        return null;
+    }
+
+    private static bool IsTitleId(string? value) =>
+        value is { Length: 16 } && value.All(Uri.IsHexDigit);
 
     private static TitleMetadata IsoFallback(IDiscNode root)
     {

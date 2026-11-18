@@ -16,6 +16,7 @@ public static class CliHost
     private static readonly SemaphoreSlim Gate = new(1, 1);
     private static readonly AsyncLocal<bool> JsonOutput = new();
     private static readonly AsyncLocal<DiscKey?> LoadedKey = new();
+    private static readonly AsyncLocal<string?> KeysPath = new();
     private static readonly JsonSerializerOptions Json = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -68,15 +69,19 @@ public static class CliHost
         var manifest = new Option<string>("--manifest") { Description = "Write a hash manifest to this file" };
         var searchPattern = new Argument<string>("pattern") { Description = "Name or glob to find" };
         var discKey = new Option<string>("--disc-key") { Description = "A .ird file or a 16-byte disc key. The key is not printed." };
+        var keys = new Option<string>("--keys") { Description = "Path to prod.keys, or a folder containing it. title.keys beside it is used too. Keys are not printed." };
 
         var info = new Command("info", "Describe an image");
         info.Arguments.Add(image);
         info.Options.Add(json);
         info.Options.Add(showSystem);
         info.Options.Add(discKey);
+        info.Options.Add(keys);
         info.SetAction((result, token) => WithDiscKeyAsync(
             result.GetValue(discKey),
-            () => InfoAsync(result.GetValue(image)!, result.GetValue(json), result.GetValue(showSystem), token)));
+            () => WithKeysAsync(
+                result.GetValue(keys),
+                () => InfoAsync(result.GetValue(image)!, result.GetValue(json), result.GetValue(showSystem), token))));
 
         var list = new Command("list", "List one directory");
         list.Arguments.Add(image);
@@ -84,20 +89,26 @@ public static class CliHost
         list.Options.Add(json);
         list.Options.Add(longer);
         list.Options.Add(showSystem);
+        list.Options.Add(keys);
         list.Aliases.Add("ls");
-        list.SetAction((result, token) => ListAsync(
+        list.SetAction((result, token) => WithKeysAsync(
+            result.GetValue(keys),
+            () => ListAsync(
             result.GetValue(image)!,
             result.GetValue(path),
             result.GetValue(json),
             result.GetValue(longer),
             result.GetValue(showSystem),
-            token));
+            token)));
 
         var tree = new Command("tree", "Print the directory tree");
         tree.Arguments.Add(image);
         tree.Options.Add(path);
         tree.Options.Add(showSystem);
-        tree.SetAction((result, token) => TreeAsync(result.GetValue(image)!, result.GetValue(path), result.GetValue(showSystem), token));
+        tree.Options.Add(keys);
+        tree.SetAction((result, token) => WithKeysAsync(
+            result.GetValue(keys),
+            () => TreeAsync(result.GetValue(image)!, result.GetValue(path), result.GetValue(showSystem), token)));
 
         var extract = new Command("extract", "Copy files out of an image");
         extract.Arguments.Add(image);
@@ -109,9 +120,13 @@ public static class CliHost
         extract.Options.Add(includeProtected);
         extract.Options.Add(showSystem);
         extract.Options.Add(json);
+        extract.Options.Add(discKey);
+        extract.Options.Add(keys);
         extract.SetAction((result, token) => WithDiscKeyAsync(
             result.GetValue(discKey),
-            () => ExtractAsync(
+            () => WithKeysAsync(
+                result.GetValue(keys),
+                () => ExtractAsync(
             result.GetValue(image)!,
             result.GetValue(output),
             result.GetValue(path),
@@ -121,7 +136,7 @@ public static class CliHost
             result.GetValue(includeProtected),
             result.GetValue(showSystem),
             result.GetValue(json),
-            token)));
+            token))));
 
         var hash = new Command("hash", "Compute SHA-256, SHA-1 or MD5");
         hash.Arguments.Add(image);
@@ -130,42 +145,53 @@ public static class CliHost
         hash.Options.Add(manifest);
         hash.Options.Add(json);
         hash.Options.Add(showSystem);
-        hash.SetAction((result, token) => HashAsync(
+        hash.Options.Add(keys);
+        hash.SetAction((result, token) => WithKeysAsync(
+            result.GetValue(keys),
+            () => HashAsync(
             result.GetValue(image)!,
             result.GetValue(path),
             result.GetValue(algo),
             result.GetValue(manifest),
             result.GetValue(json),
             result.GetValue(showSystem),
-            token));
+            token)));
 
         var search = new Command("search", "Find entries by name");
         search.Arguments.Add(image);
         search.Arguments.Add(searchPattern);
         search.Options.Add(json);
         search.Options.Add(showSystem);
-        search.SetAction((result, token) => SearchAsync(
+        search.Options.Add(keys);
+        search.SetAction((result, token) => WithKeysAsync(
+            result.GetValue(keys),
+            () => SearchAsync(
             result.GetValue(image)!,
             result.GetValue(searchPattern)!,
             result.GetValue(json),
             result.GetValue(showSystem),
-            token));
+            token)));
 
         var detect = new Command("detect", "Print the detected format");
         detect.Arguments.Add(image);
         detect.Options.Add(json);
-        detect.SetAction((result, token) => DetectAsync(result.GetValue(image)!, result.GetValue(json), token));
+        detect.Options.Add(keys);
+        detect.SetAction((result, token) => WithKeysAsync(
+            result.GetValue(keys),
+            () => DetectAsync(result.GetValue(image)!, result.GetValue(json), token)));
 
-        extract.Options.Add(discKey);
         var artOut = new Option<string>("--out") { Description = "Folder to write the icon and banner into" };
         var art = new Command("art", "Export the title icon and banner");
         art.Arguments.Add(image);
         art.Options.Add(artOut);
         art.Options.Add(json);
         art.Options.Add(discKey);
+        art.Options.Add(keys);
         art.SetAction((result, token) => WithDiscKeyAsync(
             result.GetValue(discKey),
-            () => ArtAsync(result.GetValue(image)!, result.GetValue(artOut), result.GetValue(json), token)));
+            () => WithKeysAsync(
+                result.GetValue(keys),
+                () => ArtAsync(result.GetValue(image)!, result.GetValue(artOut), result.GetValue(json), token))));
 
         var drives = new Command("drives", "List optical drives that have a disc");
         drives.Options.Add(json);
@@ -236,7 +262,8 @@ public static class CliHost
                     banner = meta.BannerName,
                     fromDrive = id.FromDrive ? (bool?)true : null,
                     notice = id.Notice,
-                    discKeyLoaded = LoadedKey.Value is null ? null : (bool?)true
+                    discKeyLoaded = LoadedKey.Value is null ? null : (bool?)true,
+                    keysLoaded = KeysPath.Value is null ? null : (bool?)true
                 });
             }
             else
@@ -283,6 +310,11 @@ public static class CliHost
                 if (LoadedKey.Value is not null)
                 {
                     Line("Disc key", "loaded");
+                }
+
+                if (KeysPath.Value is not null)
+                {
+                    Line("Keys", "loaded");
                 }
 
                 if (!string.IsNullOrWhiteSpace(id.Notice))
@@ -619,6 +651,25 @@ public static class CliHost
         }
     }
 
+    private static async Task<int> WithKeysAsync(string? path, Func<Task<int>> action)
+    {
+        KeysPath.Value = null;
+        if (!string.IsNullOrWhiteSpace(path) && !File.Exists(path) && !Directory.Exists(path))
+        {
+            return WriteError(1, "user", "The keys path does not exist.");
+        }
+
+        KeysPath.Value = string.IsNullOrWhiteSpace(path) ? null : path;
+        try
+        {
+            return await action().ConfigureAwait(false);
+        }
+        finally
+        {
+            KeysPath.Value = null;
+        }
+    }
+
     private static async Task<int> DrivesAsync(bool json, CancellationToken cancellationToken)
     {
         try
@@ -776,7 +827,7 @@ public static class CliHost
     {
         try
         {
-            await using var disc = await DiscImages.OpenAsync(image, new OpenOptions { ShowSystemUpdate = showSystem }, cancellationToken).ConfigureAwait(false);
+            await using var disc = await DiscImages.OpenAsync(image, new OpenOptions { ShowSystemUpdate = showSystem, KeysDirectory = KeysPath.Value }, cancellationToken).ConfigureAwait(false);
             return await action(disc, cancellationToken).ConfigureAwait(false);
         }
         catch (FileNotFoundException ex)

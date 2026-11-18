@@ -142,6 +142,25 @@ public partial class MainWindow : EliteLevel.Avalonia.Controls.EliteWindow
         }
     }
 
+    private async void OnBrowseSwitchKeys(object? sender, RoutedEventArgs e)
+    {
+        if (Model is null)
+        {
+            return;
+        }
+
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Nintendo Switch keys",
+            AllowMultiple = false
+        });
+        var path = files.Count > 0 ? files[0].TryGetLocalPath() : null;
+        if (path is not null)
+        {
+            Model.SwitchKeys = path;
+        }
+    }
+
     private void OnRow(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: string path })

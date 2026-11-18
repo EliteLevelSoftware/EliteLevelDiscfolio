@@ -44,12 +44,13 @@ public partial class MainViewModel : ObservableObject
         CheckUpdatesOnStartup = _settings.CheckForUpdates;
         UpdateChannel = _settings.UpdateChannel == "prerelease" ? "prerelease" : "stable";
         UpdateSource = _settings.UpdateSource ?? "";
+        SwitchKeys = _settings.SwitchKeys ?? "";
         ExtractDirectory = _settings.ExtractDirectory ?? "";
         SkipExisting = true;
         _cache = new TitleArtCache(SettingsStore.CacheDirectory);
         foreach (var recent in _settings.Recent)
         {
-            var cached = string.IsNullOrEmpty(recent.CacheKey) ? _cache.TryGet(recent.Path) : _cache.TryGetKey(recent.CacheKey);
+            var cached = string.IsNullOrEmpty(recent.CacheKey) ? _cache.TryGet(recent.Path, ArtVariant()) : _cache.TryGetKey(recent.CacheKey);
             var title = recent.Title;
             var titleId = recent.TitleId ?? "";
             string? icon = null;
@@ -129,6 +130,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool checkUpdatesOnStartup;
     [ObservableProperty] private string updateChannel = "stable";
     [ObservableProperty] private string updateSource = "";
+    [ObservableProperty] private string switchKeys = "";
     [ObservableProperty] private string updateStatus = "";
     [ObservableProperty] private bool updateAvailable;
     [ObservableProperty] private bool updateReady;
@@ -286,7 +288,11 @@ public partial class MainViewModel : ObservableObject
         NotifyVisibility();
         try
         {
-            var next = await DiscImages.OpenAsync(path, new OpenOptions { ShowSystemUpdate = ShowSystemUpdate }).ConfigureAwait(true);
+            var next = await DiscImages.OpenAsync(path, new OpenOptions
+            {
+                ShowSystemUpdate = ShowSystemUpdate,
+                KeysDirectory = CurrentSwitchKeys()
+            }).ConfigureAwait(true);
             if (generation != _generation)
             {
                 await next.DisposeAsync().ConfigureAwait(true);
@@ -309,7 +315,7 @@ public partial class MainViewModel : ObservableObject
             var metadata = TitleMetadataReader.Read(next);
             var cached = next.Identity.FromDrive && !string.IsNullOrEmpty(next.Identity.CacheKey)
                 ? _cache.StoreKey(next.Identity.CacheKey, metadata)
-                : _cache.Store(path, metadata);
+                : _cache.Store(path, metadata, ArtVariant());
             ApplyIdentity(next.Identity, path, metadata, cached);
             RebuildRows();
             Remember(path, next.Identity);
@@ -526,6 +532,23 @@ public partial class MainViewModel : ObservableObject
         Persist();
     }
 
+    partial void OnSwitchKeysChanged(string value)
+    {
+        var trimmed = value.Trim();
+        var stored = trimmed.Length == 0 ? null : trimmed;
+        if (string.Equals(_settings.SwitchKeys, stored, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _settings.SwitchKeys = stored;
+        Persist();
+        if (HasImage && !string.IsNullOrEmpty(_openPath) && (stored is null || File.Exists(stored) || Directory.Exists(stored)))
+        {
+            _ = OpenAsync(_openPath);
+        }
+    }
+
     partial void OnUpdateReadyChanged(bool value) => RestartToUpdateCommand.NotifyCanExecuteChanged();
 
     private void ApplyIdentity(ImageIdentity identity, string path, TitleMetadata metadata, CachedTitle cached)
@@ -584,6 +607,7 @@ public partial class MainViewModel : ObservableObject
             "Xbox" => "Xbox",
             "PlayStation 2" => "PS2",
             "PlayStation 1" => "PS1",
+            "Nintendo Switch" => "Switch",
             _ => ""
         };
         IsDriveSource = identity.FromDrive;
@@ -688,7 +712,7 @@ public partial class MainViewModel : ObservableObject
 
         var icon = identity.FromDrive && !string.IsNullOrEmpty(identity.CacheKey)
             ? _cache.TryGetKey(identity.CacheKey)?.IconPath
-            : _cache.TryGet(path)?.IconPath;
+            : _cache.TryGet(path, ArtVariant())?.IconPath;
         Recent.Insert(0, new RecentItem(path, title, meta, TitleId, icon, identity.FromDrive, identity.CacheKey));
         while (Recent.Count > 8)
         {
@@ -1234,12 +1258,45 @@ public partial class MainViewModel : ObservableObject
         return !string.IsNullOrEmpty(TitleId) && TitleId.Contains(query, StringComparison.OrdinalIgnoreCase);
     }
 
+    private string? CurrentSwitchKeys() => string.IsNullOrWhiteSpace(SwitchKeys) ? null : SwitchKeys.Trim();
+
+    private string? ArtVariant()
+    {
+        var path = CurrentSwitchKeys();
+        if (path is null)
+        {
+            return null;
+        }
+
+        long length = 0;
+        long ticks = 0;
+        try
+        {
+            if (File.Exists(path))
+            {
+                var info = new FileInfo(path);
+                length = info.Length;
+                ticks = info.LastWriteTimeUtc.Ticks;
+            }
+            else if (Directory.Exists(path))
+            {
+                ticks = new DirectoryInfo(path).LastWriteTimeUtc.Ticks;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return path;
+        }
+
+        return string.Create(CultureInfo.InvariantCulture, $"switch-keys\n{path}\n{length}\n{ticks}");
+    }
+
     private static string ProductVersion()
     {
         var version = typeof(MainViewModel).Assembly.GetName().Version;
         if (version is null)
         {
-            return "0.4.0";
+            return "0.5.0";
         }
 
         return string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{version.Major}.{version.Minor}.{Math.Max(version.Build, 0)}");

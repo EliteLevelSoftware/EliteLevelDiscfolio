@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using EliteLevel.Disc.Core.Drives;
 using EliteLevel.Disc.Core.Formats;
+using EliteLevel.Disc.Core.Formats.Switch;
 using EliteLevel.Disc.Core.Formats.Xdvdfs;
 
 [assembly: InternalsVisibleTo("EliteLevel.Disc.Core.Tests")]
@@ -11,7 +12,7 @@ namespace EliteLevel.Disc.Core;
 /// <summary>Opens a disc image or a folder dump. The returned image owns its stream and is read-only.</summary>
 public static class DiscImages
 {
-    private static readonly IImageFormat[] Formats = [new XdvdfsFormat(), new Iso9660Format()];
+    private static readonly IImageFormat[] Formats = [new XdvdfsFormat(), new Iso9660Format(), new SwitchFormat()];
 
     public static IReadOnlyList<IImageFormat> RegisteredFormats => Formats;
 
@@ -84,6 +85,13 @@ public static class DiscImages
                 FileName = displayName,
                 Extension = Path.GetExtension(displayName)
             };
+            var openOptions = new OpenOptions
+            {
+                ShowSystemUpdate = options.ShowSystemUpdate,
+                MergeMultiExtent = options.MergeMultiExtent,
+                KeysDirectory = options.KeysDirectory,
+                DisplayName = displayName
+            };
             foreach (var format in Formats)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -93,13 +101,8 @@ public static class DiscImages
                 }
 
                 stream.Position = 0;
-                var image = await format.OpenAsync(stream, options, cancellationToken).ConfigureAwait(false);
+                var image = await format.OpenAsync(stream, openOptions, cancellationToken).ConfigureAwait(false);
                 return new NamedImage(image, displayName);
-            }
-
-            if (UnsupportedSwitch.Matches(stream, displayName))
-            {
-                throw new DiscFormatException(DiscFormatException.SwitchUnsupported);
             }
 
             throw new DiscFormatException(UnsupportedFileMessage);
@@ -111,7 +114,7 @@ public static class DiscImages
         }
     }
 
-    private sealed class NamedImage : IDiscImage
+    private sealed class NamedImage : IDiscImage, ISwitchTitle
     {
         private readonly IDiscImage _inner;
 
@@ -124,6 +127,7 @@ public static class DiscImages
 
         public ImageIdentity Identity { get; }
         public IDiscNode Root => _inner.Root;
+        public string? TitleId => (_inner as ISwitchTitle)?.TitleId;
         public ValueTask DisposeAsync() => _inner.DisposeAsync();
     }
 
@@ -131,7 +135,8 @@ public static class DiscImages
     {
         "iso9660" => 0,
         "xdvdfs" => 1,
-        "folder" => 2,
+        "switch" => 2,
+        "folder" => 3,
         _ => 10
     };
 

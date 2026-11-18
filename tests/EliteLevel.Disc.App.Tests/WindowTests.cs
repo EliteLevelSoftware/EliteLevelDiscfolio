@@ -197,4 +197,65 @@ public class WindowTests
             }
         }
     }
+
+    [AvaloniaFact]
+    public async Task Window_lists_a_switch_nsp_and_asks_for_keys()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "discfolio-ui", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var nsp = Path.Combine(directory, "northwind.nsp");
+        try
+        {
+            await File.WriteAllBytesAsync(nsp, TinyPfs0(("note.txt", "hello"u8.ToArray()), ("control.nca", new byte[32])));
+            var window = new MainWindow();
+            window.Show();
+            var model = Assert.IsType<MainViewModel>(window.DataContext);
+            await model.OpenAsync(nsp);
+            Assert.True(model.HasImage);
+            Assert.Contains("Nintendo Switch", model.ChipLine);
+            Assert.Equal("Switch", model.PlatformTag);
+            Assert.Contains("does not include keys", model.DriveNotice);
+            Assert.Contains(model.Rows, row => row.Name == "note.txt");
+            model.SelectRowCommand.Execute("/note.txt");
+            Assert.Equal("/note.txt", model.SelectedPath);
+            window.Close();
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(directory, true);
+            }
+            catch (IOException)
+            {
+            }
+        }
+    }
+
+    private static byte[] TinyPfs0(params (string Name, byte[] Data)[] files)
+    {
+        var names = files.Select(file => System.Text.Encoding.UTF8.GetBytes(file.Name + "\0")).ToArray();
+        var strings = names.Sum(name => name.Length);
+        var header = 0x10 + (files.Length * 0x18) + strings;
+        var size = header + files.Sum(file => file.Data.Length);
+        var result = new byte[size];
+        "PFS0"u8.CopyTo(result);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(result.AsSpan(4), files.Length);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(result.AsSpan(8), strings);
+        var nameAt = 0;
+        var dataAt = 0;
+        for (var i = 0; i < files.Length; i++)
+        {
+            var at = 0x10 + (i * 0x18);
+            System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(result.AsSpan(at), dataAt);
+            System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(result.AsSpan(at + 8), files[i].Data.Length);
+            System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(result.AsSpan(at + 0x10), nameAt);
+            names[i].CopyTo(result.AsSpan(0x10 + (files.Length * 0x18) + nameAt));
+            files[i].Data.CopyTo(result.AsSpan(header + dataAt));
+            nameAt += names[i].Length;
+            dataAt += files[i].Data.Length;
+        }
+
+        return result;
+    }
 }

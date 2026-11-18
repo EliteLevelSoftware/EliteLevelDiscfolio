@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.5.0
 
+- Nintendo Switch NSP and XCI images open and can be browsed. An NSP is a PFS0 container: NCAs, tickets, certificates, and `cnmt.xml` are listed, and those entries extract as stored. An XCI reads the game card header and the HFS0 partitions (`update`, `normal`, `secure`, `logo`, and any others in the root).
+- NCA contents stay encrypted unless you supply your own keys. Settings takes a path to `prod.keys`, or to a folder that also contains `title.keys`. The command line uses `--keys`. Discfolio does not ship keys. With a header key, NCA headers decrypt and RomFS and ExeFS can be browsed and extracted. The title, title ID, and version are read from NACP, and `icon_AmericanEnglish.dat` is used for the library tile. Without keys, the container still opens and the notice says the keys have to come from your own console.
+- A compressed NSZ or XCZ is recognized. Solid archives are refused. An NCZ entry inside a container is listed and is not decompressed.
+- The art cache key includes the keys path, so adding keys and reopening an image computes the title and icon again.
 - macOS releases for Apple silicon are packed with Velopack. The release gets an unsigned setup pkg and a portable zip. The build machine has no Apple signing identity, so Gatekeeper asks before the app opens.
 
 ## 0.4.0

@@ -91,8 +91,7 @@ public class CliTests
         Assert.Contains("ISO 9660/Joliet (including PS3)", bad.Stderr);
         Assert.Contains("Xbox and Xbox 360 XDVDFS", bad.Stderr);
         Assert.Contains("folder dumps", bad.Stderr);
-        Assert.DoesNotContain("NSP", bad.Stderr);
-        Assert.DoesNotContain("XCI", bad.Stderr);
+        Assert.Contains("Nintendo Switch NSP and XCI", bad.Stderr);
         Assert.Equal(string.Empty, bad.Stdout);
 
         var usage = await Run("extract", iso);
@@ -122,26 +121,24 @@ public class CliTests
             Assert.Equal("unsupported", error.GetProperty("kind").GetString());
             Assert.Equal(text.Stderr.Trim(), error.GetProperty("message").GetString());
             Assert.Contains("ISO 9660/Joliet (including PS3)", error.GetProperty("message").GetString());
-            Assert.DoesNotContain("NSP", error.GetProperty("message").GetString());
+            Assert.Contains("Nintendo Switch NSP and XCI", error.GetProperty("message").GetString());
         }
 
         var nsp = Path.Combine(temp.Path, "game.nsp");
         await File.WriteAllBytesAsync(nsp, "PFS0"u8.ToArray().Concat(new byte[24]).ToArray());
         var switchImage = await Run("detect", nsp, "--json");
-        Assert.Equal(2, switchImage.Code);
-        Assert.Equal(string.Empty, switchImage.Stderr);
+        Assert.Equal(0, switchImage.Code);
         using (var doc = JsonDocument.Parse(switchImage.Stdout))
         {
-            var error = doc.RootElement.GetProperty("error");
-            Assert.Equal(2, error.GetProperty("code").GetInt32());
-            Assert.Equal("unsupported", error.GetProperty("kind").GetString());
-            Assert.Equal(DiscFormatException.SwitchUnsupported, error.GetProperty("message").GetString());
-            Assert.Contains("aren't supported yet", error.GetProperty("message").GetString());
+            Assert.Equal("switch", doc.RootElement.GetProperty("format").GetString());
+            Assert.Equal("Nintendo Switch", doc.RootElement.GetProperty("platform").GetString());
         }
 
-        var switchText = await Run("info", nsp);
+        var nsz = Path.Combine(temp.Path, "game.nsz");
+        await File.WriteAllBytesAsync(nsz, [0x28, 0xB5, 0x2F, 0xFD, 0, 0, 0, 0]);
+        var switchText = await Run("info", nsz);
         Assert.Equal(2, switchText.Code);
-        Assert.Equal(DiscFormatException.SwitchUnsupported, switchText.Stderr.Trim());
+        Assert.Equal(DiscFormatException.SwitchCompressed, switchText.Stderr.Trim());
         Assert.Equal(string.Empty, switchText.Stdout);
 
         var missing = await Run("info", Path.Combine(temp.Path, "missing.iso"), "--json");
