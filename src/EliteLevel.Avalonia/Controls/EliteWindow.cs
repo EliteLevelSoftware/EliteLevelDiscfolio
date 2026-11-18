@@ -6,9 +6,10 @@ using Avalonia.Media;
 namespace EliteLevel.Avalonia.Controls;
 
 /// <summary>
-/// Undecorated window. Restored it is a 28px-radius charcoal shell with its own shadow.
+/// Undecorated window. Restored it is a 28px-radius shell with a 1px frame and its own shadow.
 /// Maximised, or when the platform has no compositor, the corners go square and the shadow drops.
-/// Caption buttons stay Windows-style on every operating system. There is no backdrop blur.
+/// The frame stays on the shell border. Caption buttons stay Windows-style on every operating system.
+/// There is no backdrop blur.
 /// </summary>
 public class EliteWindow : Window
 {
@@ -21,9 +22,9 @@ public class EliteWindow : Window
     public static readonly DirectProperty<EliteWindow, BoxShadows> ChromeShadowProperty =
         AvaloniaProperty.RegisterDirect<EliteWindow, BoxShadows>(nameof(ChromeShadow), window => window.ChromeShadow);
 
-    private static readonly BoxShadows RestoredShadow = BoxShadows.Parse("0 40 90 0 #8C000000, 0 0 0 1 #0AFFFFFF");
+    private static readonly BoxShadows RestoredShadow = BoxShadows.Parse("0 40 90 0 #8C000000, 0 0 0 1 #FF5A2020");
 
-    private double _chromeMargin = 24;
+    private double _chromeMargin = 40;
     private CornerRadius _chromeRadius = new(28);
     private BoxShadows _chromeShadow = RestoredShadow;
 
@@ -101,8 +102,11 @@ public class EliteWindow : Window
             return;
         }
 
-        ChromeMargin = 24;
+        ChromeMargin = 40;
         ChromeRadius = new CornerRadius(28);
-        ChromeShadow = RestoredShadow;
+        ChromeShadow = Application.Current?.TryGetResource("ElShadowWindow", ActualThemeVariant, out var shadow) == true
+            && shadow is BoxShadows parsed
+            ? parsed
+            : RestoredShadow;
     }
 }

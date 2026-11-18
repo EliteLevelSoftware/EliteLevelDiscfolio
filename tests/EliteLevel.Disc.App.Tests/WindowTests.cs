@@ -31,6 +31,40 @@ public class WindowTests
     }
 
     [AvaloniaFact]
+    public void Window_shows_one_primary_and_the_credit()
+    {
+        var window = new MainWindow();
+        window.Show();
+        var model = Assert.IsType<MainViewModel>(window.DataContext);
+        model.DismissWelcomeCommand.Execute(null);
+        Assert.False(model.ShowWelcome);
+        Assert.Equal("Discfolio " + model.VersionLabel + " · by Elite Level Software", model.CreditLine);
+        Assert.StartsWith("v", model.VersionLabel);
+        Assert.DoesNotContain("0.0.0", model.VersionLabel);
+
+        var text = window.GetVisualDescendants().OfType<TextBlock>().Select(block => block.Text).ToList();
+        Assert.Contains("Discfolio", text);
+        Assert.Contains(model.VersionLabel, text);
+        Assert.Contains("·", text);
+        Assert.Contains("by Elite Level Software", text);
+
+        var primaries = window.GetVisualDescendants().OfType<Button>()
+            .Where(button => button.Classes.Contains("el-primary") && button.IsEffectivelyVisible)
+            .Select(button => button.Content as string)
+            .ToList();
+        Assert.Equal(new[] { "Open image" }, primaries);
+
+        model.OpenAboutCommand.Execute(null);
+        window.UpdateLayout();
+        Assert.True(model.ShowAbout);
+        text = window.GetVisualDescendants().OfType<TextBlock>().Select(block => block.Text).ToList();
+        Assert.Contains("by Elite Level Software", text);
+        Assert.Contains("A product of Elite Level", text);
+        Assert.Contains("Plus Jakarta Sans and DM Mono are included under the SIL Open Font License. Both notices ship with Discfolio.", text);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void Window_opens_on_the_empty_state()
     {
         var window = new MainWindow();

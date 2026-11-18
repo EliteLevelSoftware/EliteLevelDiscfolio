@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The window, cards and controls use the warm oxblood surfaces and 1px red-brown frames. Each view keeps a single gold primary button. Remove from library and Clear missing use danger text on a neutral button.
+- The status bar and the About dialog read Discfolio, the assembly version, and "by Elite Level Software".
+
 ## 0.6.2
 
 - Linux release files restored. vpk 1.2.161 does not accept `--noPortable` on Linux, so the 0.6.1 pack stopped before upload. The AppImage, the full package, and `releases.linux-x64-stable.json` are published again.

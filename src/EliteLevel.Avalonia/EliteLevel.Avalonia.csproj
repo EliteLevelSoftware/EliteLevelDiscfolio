@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>EliteLevel.Avalonia</RootNamespace>
-    <Description>Elite Level Design System v2 for Avalonia. Shared by Discfolio and later desktop tools.</Description>
+    <Description>Elite Level Design System v3 for Avalonia. Shared by Discfolio and later desktop tools.</Description>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.23" />

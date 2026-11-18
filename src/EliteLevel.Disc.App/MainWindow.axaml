@@ -17,9 +17,11 @@
           CornerRadius="{Binding ChromeRadius, RelativeSource={RelativeSource AncestorType=controls:EliteWindow}}"
           BoxShadow="{Binding ChromeShadow, RelativeSource={RelativeSource AncestorType=controls:EliteWindow}}"
           Background="{StaticResource ElCharcoal900Brush}"
+          BorderBrush="{StaticResource ElFrameBrush}"
+          BorderThickness="{StaticResource ElFrameThickness}"
           ClipToBounds="True">
-    <Grid x:Name="Shell">
-      <Grid ColumnDefinitions="220,*">
+    <Grid x:Name="Shell" RowDefinitions="*,Auto">
+      <Grid Grid.Row="0" ColumnDefinitions="220,*">
         <Grid x:Name="NavColumn" Grid.Column="0">
           <Border x:Name="Marker" Width="4" Height="24" HorizontalAlignment="Left" VerticalAlignment="Top"
                   Background="{StaticResource ElGoldBrush}" CornerRadius="0,4,4,0"
@@ -36,8 +38,10 @@
                 <TextBlock Text="EliteLevel" FontSize="10.5" FontWeight="Medium" Foreground="{StaticResource ElTextMutedBrush}"/>
               </StackPanel>
             </StackPanel>
-            <Border DockPanel.Dock="Bottom" Margin="16,8,16,20" Padding="14,12" CornerRadius="18"
-                    Background="#1C1819" BorderBrush="{StaticResource ElBorderNavCardBrush}" BorderThickness="1">
+            <Panel DockPanel.Dock="Bottom" Margin="16,8,16,20">
+              <Border CornerRadius="18" Background="{StaticResource ElCharcoal900Brush}"/>
+              <Border CornerRadius="18" Padding="14,12" Background="{StaticResource ElGradPanel}"
+                      BorderBrush="{StaticResource ElBorderNavCardBrush}" BorderThickness="1">
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="Open an image" FontSize="13" FontWeight="SemiBold"/>
@@ -48,7 +52,8 @@
                   <TextBlock Text="+" FontSize="18" Foreground="{StaticResource ElGoldBrush}" FontWeight="Bold"/>
                 </Button>
               </Grid>
-            </Border>
+              </Border>
+            </Panel>
             <StackPanel DockPanel.Dock="Bottom" Margin="0,0,0,8">
               <Button x:Name="NavSettings" Classes="el-nav" Classes.active="{Binding IsSettings}" Command="{Binding ShowPageCommand}" CommandParameter="settings">
                 <Grid ColumnDefinitions="22,*">
@@ -104,29 +109,33 @@
 
         <Grid Grid.Column="1" Margin="6,0,0,0" RowDefinitions="Auto,*">
           <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,18,150,0" PointerPressed="OnDrag" Background="Transparent">
-            <Border Width="430" Height="44" CornerRadius="14" Background="{StaticResource ElCharcoal800Brush}">
+            <Border Width="430" Height="44" CornerRadius="14" Background="{StaticResource ElCharcoal800Brush}"
+                    BorderBrush="{StaticResource ElBorderControlBrush}" BorderThickness="1">
               <Grid ColumnDefinitions="Auto,*,Auto" Margin="16,0,10,0">
                 <Path Width="16" Height="16" Stretch="Uniform" Stroke="{StaticResource ElTextMutedBrush}" StrokeThickness="1.7" StrokeLineCap="Round"
                       Data="M10,10 a4.5,4.5 0 1 1 0.1,0 M14,14 L18,18" VerticalAlignment="Center"/>
                 <TextBox x:Name="SearchBox" Grid.Column="1" Classes="plain" Margin="12,0,8,0"
                          Watermark="Search images, files and title IDs" Text="{Binding SearchText}"/>
-                <Border Grid.Column="2" Background="{StaticResource ElCharcoal750Brush}" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
-                  <TextBlock Text="Ctrl K" Classes="mono" FontSize="11" Foreground="{StaticResource ElTextFaintBrush}"/>
+                <Border Grid.Column="2" Background="{StaticResource ElGoldFillBrush}" BorderBrush="{StaticResource ElGoldEdgeBrush}"
+                        BorderThickness="1,1,1,2" CornerRadius="5" Padding="7,4" VerticalAlignment="Center">
+                  <TextBlock Text="Ctrl K" Classes="mono" FontSize="11" Foreground="{StaticResource ElGoldHiBrush}"/>
                 </Border>
               </Grid>
             </Border>
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
               <Button Classes="el-icon" Command="{Binding ShowPageCommand}" CommandParameter="extract" ToolTip.Tip="Extract">
-                <Path Width="18" Height="18" Stretch="Uniform" Stroke="#C9BDB7" StrokeThickness="1.7" StrokeLineCap="Round"
+                <Path Width="18" Height="18" Stretch="Uniform" Stroke="{StaticResource ElText2Brush}" StrokeThickness="1.7" StrokeLineCap="Round"
                       Data="M12,3 V15 M7,10 L12,15 L17,10 M4,19 H20"/>
               </Button>
               <Grid Width="44" Height="44">
                 <Button Classes="el-icon" ToolTip.Tip="Notices">
-                  <Path Width="18" Height="18" Stretch="Uniform" Stroke="#C9BDB7" StrokeThickness="1.7" StrokeLineCap="Round" StrokeJoin="Round"
+                  <Path Width="18" Height="18" Stretch="Uniform" Stroke="{StaticResource ElText2Brush}" StrokeThickness="1.7" StrokeLineCap="Round" StrokeJoin="Round"
                         Data="M6,9 a6,6 0 0 1 12,0 c0,5 2,6 2,6 H4 s2,-1 2,-6 M10,19 a2,2 0 0 0 4,0"/>
                 </Button>
-                <Ellipse Width="7" Height="7" Fill="{StaticResource ElGoldBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
-                         IsVisible="{Binding HasNotification}" IsHitTestVisible="False"/>
+                <Border Width="7" Height="7" CornerRadius="4" Background="{StaticResource ElGoldBrush}"
+                        BoxShadow="{StaticResource ElShadowDotRing}"
+                        HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                        IsVisible="{Binding HasNotification}" IsHitTestVisible="False"/>
               </Grid>
               <Border Height="44" CornerRadius="22" Background="{StaticResource ElCharcoal800Brush}" Padding="14,0" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -137,7 +146,7 @@
             </StackPanel>
           </Grid>
 
-          <Grid Grid.Row="1" Margin="0,18,30,28">
+          <Grid Grid.Row="1" Margin="0,18,30,8">
             <Panel IsVisible="{Binding ShowEmpty}">
               <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12" MaxWidth="420">
                 <TextBlock Text="No image open" FontSize="17" FontWeight="Bold" HorizontalAlignment="Center"/>
@@ -160,8 +169,11 @@
             </Panel>
 
             <Panel IsVisible="{Binding ShowError}">
-              <Border Background="{StaticResource ElCharcoal850Brush}" CornerRadius="22" Padding="22" MaxWidth="560"
-                      HorizontalAlignment="Left" VerticalAlignment="Top" BorderBrush="{StaticResource ElDangerBrush}" BorderThickness="2,0,0,0">
+              <Border Background="{StaticResource ElCharcoal900Brush}" CornerRadius="22" MaxWidth="560"
+                      HorizontalAlignment="Left" VerticalAlignment="Top" BoxShadow="{StaticResource ElShadowCard}">
+              <Border Background="{StaticResource ElGradPanel}" CornerRadius="22"
+                      BorderBrush="{StaticResource ElBorderCardBrush}" BorderThickness="1">
+              <Border Padding="22" CornerRadius="22" BorderBrush="{StaticResource ElDangerTextBrush}" BorderThickness="2,0,0,0">
                 <StackPanel Spacing="12">
                   <TextBlock Text="{Binding ErrorMessage}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"/>
                   <TextBlock Text="Copy detail keeps the technical message off this sentence." Foreground="{StaticResource ElText2Brush}" TextWrapping="Wrap"/>
@@ -171,6 +183,8 @@
                     <Button Classes="el-secondary" Content="Copy detail" Click="OnCopyDetail"/>
                   </StackPanel>
                 </StackPanel>
+              </Border>
+              </Border>
               </Border>
             </Panel>
 
@@ -219,7 +233,7 @@
                         </Button>
                       </Grid>
                       <TextBlock Text="{Binding SourceName}" Classes="mono" FontSize="11" Foreground="#C7FFF0E4" TextTrimming="CharacterEllipsis"/>
-                      <Button Classes="el-ghost" Content="Remove from library" HorizontalAlignment="Stretch" Margin="0,14,0,0"
+                      <Button Classes="el-danger" Content="Remove from library" HorizontalAlignment="Stretch" Margin="0,14,0,0"
                               Command="{Binding RemoveOpenFromLibraryCommand}"/>
                     </StackPanel>
                   </DockPanel>
@@ -231,7 +245,7 @@
                     <TextBlock Text="Recent images" FontSize="17" FontWeight="Bold"/>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16">
                       <Button Background="Transparent" Command="{Binding ClearMissingCommand}">
-                        <TextBlock Text="Clear missing" Foreground="{StaticResource ElText3Brush}" FontSize="13"/>
+                        <TextBlock Text="Clear missing" Foreground="{StaticResource ElDangerTextBrush}" FontSize="13"/>
                       </Button>
                       <Button Background="Transparent" Command="{Binding ShowPageCommand}" CommandParameter="open">
                         <TextBlock Text="View library" Foreground="{StaticResource ElText3Brush}" FontSize="13"/>
@@ -257,8 +271,9 @@
                           <Grid>
                             <controls:MediaTile Seed="{Binding Seed}" Icon="{Binding IconPath}" Title="{Binding Title}" Meta="{Binding Meta}"/>
                             <Border IsVisible="{Binding IsDrive}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10"
-                                    Padding="7,2" CornerRadius="8" Background="{StaticResource ElGoldBrush}" IsHitTestVisible="False">
-                              <TextBlock Text="Drive" FontSize="10" FontWeight="Bold" Foreground="#1C1819"/>
+                                    Padding="10,4" CornerRadius="999" Background="{StaticResource ElChipOnArtBrush}"
+                                    BorderBrush="{StaticResource ElBorderChipBrush}" BorderThickness="1" IsHitTestVisible="False">
+                              <TextBlock Text="Drive" FontSize="12" FontWeight="Medium" Foreground="{StaticResource ElTextBrush}"/>
                             </Border>
                           </Grid>
                         </Button>
@@ -266,8 +281,10 @@
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
                 </DockPanel>
-                <Border Grid.Column="1" Background="{StaticResource ElCharcoal850Brush}" CornerRadius="22"
-                        BorderBrush="{StaticResource ElBorderCardBrush}" BorderThickness="1" Padding="18,18,18,14">
+                <Panel Grid.Column="1">
+                  <Border CornerRadius="22" Background="{StaticResource ElCharcoal900Brush}" BoxShadow="{StaticResource ElShadowCard}"/>
+                  <Border CornerRadius="22" Background="{StaticResource ElGradPanel}"
+                          BorderBrush="{StaticResource ElBorderCardBrush}" BorderThickness="1" Padding="18,18,18,14">
                   <DockPanel>
                     <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
                       <TextBlock Text="Files" FontSize="17" FontWeight="Bold"/>
@@ -295,7 +312,8 @@
                       </ListBox.ItemTemplate>
                     </ListBox>
                   </DockPanel>
-                </Border>
+                  </Border>
+                </Panel>
               </Grid>
             </Grid>
 
@@ -307,7 +325,7 @@
                   <Button Classes="el-primary" Content="Open image" Click="OnOpenFile"/>
                   <Button Classes="el-secondary" Content="Open folder" Click="OnOpenFolder"/>
                   <Button Classes="el-secondary" Content="Open disc drive" Click="OnOpenDrive"/>
-                  <Button Classes="el-secondary" Content="Clear missing" Command="{Binding ClearMissingCommand}"/>
+                  <Button Classes="el-danger" Content="Clear missing" Command="{Binding ClearMissingCommand}"/>
                 </StackPanel>
                 <TextBlock Text="{Binding LibraryMessage}" Foreground="{StaticResource ElTextMutedBrush}" TextWrapping="Wrap"/>
                 <ItemsControl ItemsSource="{Binding VisibleRecent}">
@@ -320,8 +338,10 @@
                           </ContextMenu>
                         </Button.ContextMenu>
                         <Grid ColumnDefinitions="Auto,*,Auto">
-                          <Border IsVisible="{Binding IsDrive}" Background="{StaticResource ElGoldBrush}" CornerRadius="8" Padding="7,2" Margin="0,0,10,0" VerticalAlignment="Center">
-                            <TextBlock Text="Drive" FontSize="10" FontWeight="Bold" Foreground="#1C1819"/>
+                          <Border IsVisible="{Binding IsDrive}" Background="{StaticResource ElChipOnArtBrush}"
+                                  BorderBrush="{StaticResource ElBorderChipBrush}" BorderThickness="1"
+                                  CornerRadius="999" Padding="10,4" Margin="0,0,10,0" VerticalAlignment="Center">
+                            <TextBlock Text="Drive" FontSize="12" FontWeight="Medium" Foreground="{StaticResource ElTextBrush}"/>
                           </Border>
                           <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}"/>
                           <TextBlock Grid.Column="2" Text="{Binding Meta}" Foreground="{StaticResource ElTextMutedBrush}" Margin="16,0,0,0"/>
@@ -339,7 +359,8 @@
                 <TextBlock Text="Files are copied to a folder you choose. The source image is not modified." Foreground="{StaticResource ElText2Brush}" TextWrapping="Wrap"/>
                 <TextBlock Text="Destination" Foreground="{StaticResource ElTextMutedBrush}"/>
                 <Grid ColumnDefinitions="*,Auto">
-                  <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44">
+                  <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44"
+                        BorderBrush="{StaticResource ElBorderControlBrush}" BorderThickness="1">
                     <TextBox Classes="plain" Text="{Binding ExtractDirectory}"/>
                   </Border>
                   <Button Grid.Column="1" Classes="el-secondary" Content="Browse" Margin="8,0,0,0" Click="OnBrowseExtract"/>
@@ -348,7 +369,8 @@
                 <CheckBox Content="Include protected paths, copied unchanged" IsChecked="{Binding IncludeProtected}"/>
                 <CheckBox Content="Decompress NCZ entries to NCA" IsChecked="{Binding DecompressNcz}"/>
                 <TextBlock Text="Pattern" Foreground="{StaticResource ElTextMutedBrush}"/>
-                <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44">
+                <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44"
+                        BorderBrush="{StaticResource ElBorderControlBrush}" BorderThickness="1">
                   <TextBox Classes="plain" Text="{Binding Pattern}" Watermark="*.png"/>
                 </Border>
                 <TextBlock Text="{Binding ProtectedSummary}" TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"/>
@@ -374,7 +396,7 @@
             </ScrollViewer>
 
             <ScrollViewer IsVisible="{Binding IsSettings}">
-              <StackPanel Spacing="16" MaxWidth="640">
+              <StackPanel Spacing="12" MaxWidth="640">
                 <TextBlock Text="Settings" FontSize="22" FontWeight="Bold"/>
                 <CheckBox Content="Reduce effects" IsChecked="{Binding ReduceEffects}"/>
                 <CheckBox Content="Show system-update folders" IsChecked="{Binding ShowSystemUpdate}"/>
@@ -384,7 +406,8 @@
                 <TextBlock Text="Optional path to your prod.keys, or a folder that contains prod.keys and title.keys. Discfolio does not include console keys. Without them, an NSP, XCI, NSZ or XCZ still opens. NCZ entries are decompressed to the stored NCA, and the files inside an NCA stay encrypted."
                            Foreground="{StaticResource ElText2Brush}" TextWrapping="Wrap"/>
                 <Grid ColumnDefinitions="*,Auto">
-                  <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44">
+                  <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44"
+                        BorderBrush="{StaticResource ElBorderControlBrush}" BorderThickness="1">
                     <TextBox Classes="plain" Text="{Binding SwitchKeys}" Watermark="prod.keys"/>
                   </Border>
                   <Button Grid.Column="1" Classes="el-secondary" Content="Browse" Margin="8,0,0,0" Click="OnBrowseSwitchKeys"/>
@@ -399,20 +422,25 @@
                 <TextBlock Text="Update source" Foreground="{StaticResource ElTextMutedBrush}"/>
                 <TextBlock Text="Leave this blank. Discfolio then uses the public GitHub releases, and no token is required."
                            Foreground="{StaticResource ElText2Brush}" TextWrapping="Wrap"/>
-                <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44">
+                <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44"
+                        BorderBrush="{StaticResource ElBorderControlBrush}" BorderThickness="1">
                   <TextBox Classes="plain" Text="{Binding UpdateSource}" Watermark="https://github.com/EliteLevelSoftware/EliteLevelDiscfolio"/>
                 </Border>
                 <Button Classes="el-primary" Content="Check now" HorizontalAlignment="Left" Command="{Binding CheckForUpdatesNowCommand}"/>
                 <TextBlock Text="{Binding UpdateStatus}" TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"/>
                 <TextBlock Text="Default extract folder" Foreground="{StaticResource ElTextMutedBrush}"/>
-                <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44">
+                <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44"
+                        BorderBrush="{StaticResource ElBorderControlBrush}" BorderThickness="1">
                   <TextBox Classes="plain" Text="{Binding ExtractDirectory}"/>
                 </Border>
-                <Border Background="{StaticResource ElCharcoal850Brush}" CornerRadius="18" Padding="16" Margin="0,12,0,0">
-                  <StackPanel Spacing="4">
-                    <TextBlock Text="Elite Level" FontSize="14" FontWeight="SemiBold"/>
-                    <TextBlock Text="A product of Elite Level" Foreground="{StaticResource ElTextMutedBrush}" FontSize="12.5"/>
-                  </StackPanel>
+                <Border Background="{StaticResource ElCharcoal900Brush}" CornerRadius="18" Margin="0,12,0,0">
+                  <Border Background="{StaticResource ElGradPanel}" CornerRadius="18" Padding="16"
+                          BorderBrush="{StaticResource ElBorderCardBrush}" BorderThickness="1">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                      <controls:SeamMark Width="18" Height="18" VerticalAlignment="Center"/>
+                      <TextBlock Text="A product of Elite Level" VerticalAlignment="Center" Foreground="{StaticResource ElText2Brush}" FontSize="12.5"/>
+                    </StackPanel>
+                  </Border>
                 </Border>
               </StackPanel>
             </ScrollViewer>
@@ -420,8 +448,14 @@
             <ScrollViewer IsVisible="{Binding IsHelp}">
               <StackPanel Spacing="12" MaxWidth="680">
                 <controls:ProductMark Width="64" Height="64" HorizontalAlignment="Left"/>
-                <TextBlock Text="EliteLevel Discfolio" FontSize="22" FontWeight="Bold"/>
-                <TextBlock Text="{Binding VersionText}" Classes="mono" Foreground="{StaticResource ElTextMutedBrush}"/>
+                <TextBlock Text="Discfolio" FontSize="22" FontWeight="Bold"/>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="Discfolio" FontSize="11.5" FontWeight="Medium" Foreground="{StaticResource ElTextMutedBrush}"/>
+                  <TextBlock Text="{Binding VersionLabel}" Classes="mono" FontSize="11" Foreground="{StaticResource ElTextMutedBrush}"/>
+                  <TextBlock Text="·" FontSize="11.5" Foreground="{StaticResource ElTextFaintBrush}"/>
+                  <TextBlock Text="by Elite Level Software" FontSize="11.5" FontWeight="Medium" Foreground="{StaticResource ElTextMutedBrush}"/>
+                </StackPanel>
+                <Button Classes="el-secondary" Content="About" HorizontalAlignment="Left" Command="{Binding OpenAboutCommand}"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
                            Text="Discfolio browses disc images and folder dumps you already have. It is read-only: the source is never modified. It does not include encryption keys or game data. Use it only with copies you are allowed to possess."/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
@@ -453,14 +487,16 @@
         </Button>
       </StackPanel>
 
-      <Border Height="6" VerticalAlignment="Top" Margin="0,0,150,0" Background="Transparent" PointerPressed="OnResizeTop"/>
-      <Border Height="6" VerticalAlignment="Bottom" Background="Transparent" PointerPressed="OnResizeBottom"/>
-      <Border Width="6" HorizontalAlignment="Left" Background="Transparent" PointerPressed="OnResizeLeft"/>
-      <Border Width="6" HorizontalAlignment="Right" Margin="0,34,0,0" Background="Transparent" PointerPressed="OnResizeRight"/>
+      <Border Grid.RowSpan="2" Height="6" VerticalAlignment="Top" Margin="0,0,150,0" Background="Transparent" PointerPressed="OnResizeTop"/>
+      <Border Grid.RowSpan="2" Height="6" VerticalAlignment="Bottom" Background="Transparent" PointerPressed="OnResizeBottom"/>
+      <Border Grid.RowSpan="2" Width="6" HorizontalAlignment="Left" Background="Transparent" PointerPressed="OnResizeLeft"/>
+      <Border Grid.RowSpan="2" Width="6" HorizontalAlignment="Right" Margin="0,34,0,0" Background="Transparent" PointerPressed="OnResizeRight"/>
 
       <Border IsVisible="{Binding UpdateAvailable}" ZIndex="15" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-              Margin="0,0,36,36" MaxWidth="420" Padding="22" CornerRadius="22"
-              Background="{StaticResource ElCharcoal850Brush}" BorderBrush="{StaticResource ElGoldBrush}" BorderThickness="1">
+              Margin="0,0,36,36" MaxWidth="420" CornerRadius="22" ClipToBounds="True"
+              Background="{StaticResource ElGoldDarkBrush}" BoxShadow="{StaticResource ElShadowMenu}">
+        <Border Margin="0,1,0,0" Padding="22" CornerRadius="0,0,22,22"
+                Background="{StaticResource ElGradToast}" BorderBrush="{StaticResource ElFrameToastBrush}" BorderThickness="1,0,1,1">
         <StackPanel Spacing="10">
           <TextBlock Text="Update available" FontSize="17" FontWeight="Bold"/>
           <TextBlock Text="{Binding UpdateMessage}" TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"/>
@@ -469,27 +505,32 @@
             <Button Classes="el-secondary" Content="Not now" Command="{Binding DismissUpdateCommand}"/>
           </StackPanel>
         </StackPanel>
+        </Border>
       </Border>
 
       <Panel IsVisible="{Binding ShowWelcome}" ZIndex="20" Background="{StaticResource ElScrimBrush}">
-        <Border Background="{StaticResource ElCharcoal850Brush}" CornerRadius="24" Padding="28" Width="520" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Border Background="{StaticResource ElCharcoal900Brush}" CornerRadius="24" Width="520" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="{StaticResource ElShadowMenu}">
+          <Border Background="{StaticResource ElGradPanel}" CornerRadius="24" Padding="28" BorderBrush="{StaticResource ElFrameToastBrush}" BorderThickness="1">
           <StackPanel Spacing="14">
             <TextBlock Text="Read-only, on your copies" FontSize="22" FontWeight="Bold"/>
             <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
                        Text="EliteLevel Discfolio browses disc images and folder dumps you already have. It does not modify the source, and it does not include encryption keys or game data. Use it only with copies you are allowed to possess."/>
             <Button Classes="el-primary" Content="Continue" HorizontalAlignment="Left" Command="{Binding DismissWelcomeCommand}"/>
           </StackPanel>
+          </Border>
         </Border>
       </Panel>
 
       <Panel IsVisible="{Binding ShowExtractDialog}" ZIndex="20" Background="{StaticResource ElScrimBrush}">
-        <Border Background="{StaticResource ElCharcoal850Brush}" CornerRadius="24" Padding="28" Width="520" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Border Background="{StaticResource ElCharcoal900Brush}" CornerRadius="24" Width="520" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="{StaticResource ElShadowMenu}">
+          <Border Background="{StaticResource ElGradPanel}" CornerRadius="24" Padding="28" BorderBrush="{StaticResource ElFrameToastBrush}" BorderThickness="1">
           <StackPanel Spacing="12">
             <TextBlock Text="Extract files" FontSize="22" FontWeight="Bold"/>
             <TextBlock Text="{Binding ProtectedSummary}" TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"/>
             <TextBlock Text="Destination" Foreground="{StaticResource ElTextMutedBrush}"/>
             <Grid ColumnDefinitions="*,Auto">
-              <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44">
+              <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44"
+                        BorderBrush="{StaticResource ElBorderControlBrush}" BorderThickness="1">
                 <TextBox Classes="plain" Text="{Binding ExtractDirectory}"/>
               </Border>
               <Button Grid.Column="1" Classes="el-secondary" Content="Browse" Margin="8,0,0,0" Click="OnBrowseExtract"/>
@@ -502,11 +543,13 @@
               <Button Classes="el-secondary" Content="Cancel" Command="{Binding CancelExtractCommand}"/>
             </StackPanel>
           </StackPanel>
+          </Border>
         </Border>
       </Panel>
 
       <Panel IsVisible="{Binding ShowDrivePicker}" ZIndex="20" Background="{StaticResource ElScrimBrush}">
-        <Border Background="{StaticResource ElCharcoal850Brush}" CornerRadius="24" Padding="28" Width="640" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Border Background="{StaticResource ElCharcoal900Brush}" CornerRadius="24" Width="640" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="{StaticResource ElShadowMenu}">
+          <Border Background="{StaticResource ElGradPanel}" CornerRadius="24" Padding="28" BorderBrush="{StaticResource ElFrameToastBrush}" BorderThickness="1">
           <StackPanel Spacing="12">
             <TextBlock Text="Open disc drive" FontSize="22" FontWeight="Bold"/>
             <TextBlock Text="Drives with a disc are listed. Discfolio only reads the drive." Foreground="{StaticResource ElText2Brush}" TextWrapping="Wrap"/>
@@ -532,11 +575,13 @@
               <Button Classes="el-secondary" Content="Cancel" Command="{Binding CloseDrivePickerCommand}"/>
             </StackPanel>
           </StackPanel>
+          </Border>
         </Border>
       </Panel>
 
       <Panel IsVisible="{Binding ShowRipDialog}" ZIndex="21" Background="{StaticResource ElScrimBrush}">
-        <Border Background="{StaticResource ElCharcoal850Brush}" CornerRadius="24" Padding="28" Width="560" MaxHeight="640" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Border Background="{StaticResource ElCharcoal900Brush}" CornerRadius="24" Width="560" MaxHeight="640" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="{StaticResource ElShadowMenu}">
+          <Border Background="{StaticResource ElGradPanel}" CornerRadius="24" Padding="28" BorderBrush="{StaticResource ElFrameToastBrush}" BorderThickness="1">
           <ScrollViewer>
             <StackPanel Spacing="12">
               <TextBlock Text="Rip to ISO" FontSize="22" FontWeight="Bold"/>
@@ -544,13 +589,15 @@
                          Text="Sectors are copied into a new ISO. A bad sector is retried, then stored as zeros and listed. SHA-256, SHA-1 and MD5 are written next to the ISO. The drive is never written."/>
               <TextBlock Text="ISO file" Foreground="{StaticResource ElTextMutedBrush}"/>
               <Grid ColumnDefinitions="*,Auto">
-                <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44">
+                <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44"
+                        BorderBrush="{StaticResource ElBorderControlBrush}" BorderThickness="1">
                   <TextBox Classes="plain" Text="{Binding RipOutput}"/>
                 </Border>
                 <Button Grid.Column="1" Classes="el-secondary" Content="Browse" Margin="8,0,0,0" Click="OnBrowseRip"/>
               </Grid>
               <TextBlock Text="Read attempts per sector" Foreground="{StaticResource ElTextMutedBrush}"/>
-              <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44">
+              <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44"
+                        BorderBrush="{StaticResource ElBorderControlBrush}" BorderThickness="1">
                 <TextBox Classes="plain" Text="{Binding RipRetriesText}"/>
               </Border>
               <TextBlock Text="{Binding RipStatus}" TextWrapping="Wrap"/>
@@ -569,8 +616,52 @@
               </StackPanel>
             </StackPanel>
           </ScrollViewer>
+          </Border>
         </Border>
       </Panel>
+
+      <Panel IsVisible="{Binding ShowAbout}" ZIndex="22" Background="{StaticResource ElScrimBrush}">
+        <Border Background="{StaticResource ElCharcoal900Brush}" CornerRadius="24" Width="560" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="{StaticResource ElShadowMenu}">
+          <Border Background="{StaticResource ElGradPanel}" CornerRadius="24" Padding="28" BorderBrush="{StaticResource ElFrameToastBrush}" BorderThickness="1">
+            <StackPanel Spacing="14">
+              <controls:ProductMark Width="64" Height="64" HorizontalAlignment="Left"/>
+              <TextBlock Text="Discfolio" FontSize="22" FontWeight="Bold"/>
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="Discfolio" FontSize="11.5" FontWeight="Medium" Foreground="{StaticResource ElTextMutedBrush}"/>
+                <TextBlock Text="{Binding VersionLabel}" Classes="mono" FontSize="11" Foreground="{StaticResource ElTextMutedBrush}"/>
+                <TextBlock Text="·" FontSize="11.5" Foreground="{StaticResource ElTextFaintBrush}"/>
+                <TextBlock Text="by Elite Level Software" FontSize="11.5" FontWeight="Medium" Foreground="{StaticResource ElTextMutedBrush}"/>
+              </StackPanel>
+              <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
+                         Text="Discfolio browses disc images and folder dumps you already have. It is read-only: the source is never modified. It does not include encryption keys or game data."/>
+              <TextBlock TextWrapping="Wrap" FontSize="12.5" Foreground="{StaticResource ElTextMutedBrush}"
+                         Text="Plus Jakarta Sans and DM Mono are included under the SIL Open Font License. Both notices ship with Discfolio."/>
+              <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,8,0,0">
+                <controls:SeamMark Width="28" Height="28" VerticalAlignment="Center"/>
+                <TextBlock Text="A product of Elite Level" VerticalAlignment="Center" Foreground="{StaticResource ElText2Brush}" FontSize="12.5"/>
+              </StackPanel>
+              <Button Classes="el-secondary" Content="Close" HorizontalAlignment="Left" Command="{Binding CloseAboutCommand}"/>
+            </StackPanel>
+          </Border>
+        </Border>
+      </Panel>
+
+      <Border Grid.Row="1" Height="28" Padding="16,0" BorderBrush="{StaticResource ElBorderControlBrush}" BorderThickness="0,1,0,0"
+              Background="{StaticResource ElCharcoal900Brush}">
+        <DockPanel LastChildFill="False">
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <TextBlock Text="Discfolio" FontSize="11.5" FontWeight="Medium" FontFamily="{StaticResource ElFontUi}"
+                       Foreground="{StaticResource ElTextMutedBrush}"/>
+            <TextBlock Text="{Binding VersionLabel}" FontSize="11" FontFamily="{StaticResource ElFontMono}"
+                       Foreground="{StaticResource ElTextMutedBrush}"/>
+            <TextBlock Text="·" FontSize="11.5" Foreground="{StaticResource ElTextFaintBrush}"/>
+            <TextBlock Text="by Elite Level Software" FontSize="11.5" FontWeight="Medium" FontFamily="{StaticResource ElFontUi}"
+                       Foreground="{StaticResource ElTextMutedBrush}"/>
+          </StackPanel>
+          <TextBlock Text="{Binding StatusLine}" FontSize="11.5" FontWeight="Medium" VerticalAlignment="Center"
+                     Foreground="{StaticResource ElTextMutedBrush}" TextTrimming="CharacterEllipsis"/>
+        </DockPanel>
+      </Border>
     </Grid>
   </Border>
 </controls:EliteWindow>

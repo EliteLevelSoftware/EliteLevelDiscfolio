@@ -10,6 +10,7 @@ namespace EliteLevel.Disc.App.Tests;
 public class HeadlessApp
 {
     public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
-        .UseHeadless(new AvaloniaHeadlessPlatformOptions())
+        .UseSkia()
+        .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
         .WithInterFont();
 }

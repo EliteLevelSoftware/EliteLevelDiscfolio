@@ -47,13 +47,18 @@
   <Style Selector="Button.el-primary">
     <Setter Property="Height" Value="42"/>
     <Setter Property="Padding" Value="22,0"/>
-    <Setter Property="Background" Value="{StaticResource ElGoldBrush}"/>
+    <Setter Property="Background" Value="{StaticResource ElGradGoldButton}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource ElGoldDimBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
     <Setter Property="Foreground" Value="{StaticResource ElTextOnGoldBrush}"/>
     <Setter Property="FontWeight" Value="Bold"/>
     <Setter Property="FontSize" Value="13.5"/>
     <Setter Property="Template">
       <ControlTemplate>
-        <Border Background="{TemplateBinding Background}" CornerRadius="13" Padding="{TemplateBinding Padding}"
+        <Border Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="13" Padding="{TemplateBinding Padding}"
                 BoxShadow="{StaticResource ElShadowGoldButton}">
           <TextBlock Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
                      FontWeight="Bold" FontSize="13.5" VerticalAlignment="Center" HorizontalAlignment="Center"/>
@@ -62,12 +67,65 @@
     </Setter>
   </Style>
   <Style Selector="Button.el-primary:pointerover">
-    <Setter Property="Background" Value="#DDBB4A"/>
+    <Setter Property="Background">
+      <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+        <GradientStop Offset="0" Color="{StaticResource ElGoldHi}"/>
+        <GradientStop Offset="1" Color="{StaticResource ElGold}"/>
+      </LinearGradientBrush>
+    </Setter>
   </Style>
   <Style Selector="Button.el-primary:disabled">
     <Setter Property="Background" Value="{StaticResource ElCharcoal800Brush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource ElBorderControlBrush}"/>
     <Setter Property="Foreground" Value="{StaticResource ElTextFaintBrush}"/>
     <Setter Property="Opacity" Value="1"/>
+  </Style>
+  <Style Selector="Button.el-primary:disabled /template/ Border">
+    <Setter Property="BoxShadow" Value="0 0 0 0 #00000000"/>
+  </Style>
+
+  <Style Selector="Button.el-danger">
+    <Setter Property="Height" Value="42"/>
+    <Setter Property="Padding" Value="18,0"/>
+    <Setter Property="Background" Value="{StaticResource ElCharcoal750Brush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource ElBorderButtonBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Foreground" Value="{StaticResource ElDangerTextBrush}"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="13" Padding="{TemplateBinding Padding}">
+          <TextBlock Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
+                     FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.el-danger:pointerover">
+    <Setter Property="Background" Value="{StaticResource ElCharcoal700Brush}"/>
+  </Style>
+
+  <Style Selector="Button.el-crimson">
+    <Setter Property="Height" Value="42"/>
+    <Setter Property="Padding" Value="22,0"/>
+    <Setter Property="Background" Value="{StaticResource ElGradCrimsonButton}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource ElCrimsonEdgeBrush}"/>
+    <Setter Property="BorderThickness" Value="1.5"/>
+    <Setter Property="Foreground" Value="White"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="13" Padding="{TemplateBinding Padding}"
+                BoxShadow="{StaticResource ElShadowCrimsonButton}">
+          <TextBlock Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
+                     FontWeight="Bold" FontSize="13.5" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+        </Border>
+      </ControlTemplate>
+    </Setter>
   </Style>
 
   <Style Selector="Button.el-ghost">
@@ -92,7 +150,9 @@
     <Setter Property="Foreground" Value="{StaticResource ElTextBrush}"/>
     <Setter Property="Template">
       <ControlTemplate>
-        <Border Background="{TemplateBinding Background}" CornerRadius="13" Padding="{TemplateBinding Padding}">
+        <Border Background="{TemplateBinding Background}"
+                BorderBrush="{StaticResource ElBorderButtonBrush}" BorderThickness="1"
+                CornerRadius="13" Padding="{TemplateBinding Padding}">
           <TextBlock Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
                      FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Center"/>
         </Border>
@@ -107,11 +167,12 @@
     <Setter Property="Width" Value="44"/>
     <Setter Property="Height" Value="44"/>
     <Setter Property="Background" Value="{StaticResource ElCharcoal800Brush}"/>
-    <Setter Property="Foreground" Value="#C9BDB7"/>
+    <Setter Property="Foreground" Value="{StaticResource ElText2Brush}"/>
     <Setter Property="Padding" Value="0"/>
     <Setter Property="Template">
       <ControlTemplate>
-        <Border Background="{TemplateBinding Background}" CornerRadius="22" Width="44" Height="44">
+        <Border Background="{TemplateBinding Background}" CornerRadius="22" Width="44" Height="44"
+                BorderBrush="{StaticResource ElBorderCardBrush}" BorderThickness="1">
           <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
       </ControlTemplate>
@@ -125,7 +186,7 @@
     <Setter Property="Width" Value="46"/>
     <Setter Property="Height" Value="34"/>
     <Setter Property="Background" Value="Transparent"/>
-    <Setter Property="Foreground" Value="#B9ADA7"/>
+    <Setter Property="Foreground" Value="{StaticResource ElText2Brush}"/>
     <Setter Property="Padding" Value="0"/>
     <Setter Property="Template">
       <ControlTemplate>
@@ -136,7 +197,7 @@
     </Setter>
   </Style>
   <Style Selector="Button.el-caption:pointerover">
-    <Setter Property="Background" Value="#0FFFFFFF"/>
+    <Setter Property="Background" Value="{StaticResource ElCharcoal750Brush}"/>
   </Style>
   <Style Selector="Button.el-caption.el-close.round /template/ Border">
     <Setter Property="CornerRadius" Value="0,28,0,0"/>
@@ -177,7 +238,7 @@
     <Setter Property="Stroke" Value="{StaticResource ElGoldBrush}"/>
   </Style>
   <Style Selector="Button.el-nav TextBlock.count">
-    <Setter Property="Foreground" Value="#7D726E"/>
+    <Setter Property="Foreground" Value="{StaticResource ElTextMutedBrush}"/>
     <Setter Property="FontSize" Value="11.5"/>
     <Setter Property="FontWeight" Value="SemiBold"/>
   </Style>
@@ -198,11 +259,11 @@
     </Setter>
   </Style>
   <Style Selector="Button.el-row:pointerover">
-    <Setter Property="Background" Value="#221D1E"/>
+    <Setter Property="Background" Value="{StaticResource ElCharcoal750Brush}"/>
   </Style>
   <Style Selector="Button.el-row.selected">
     <Setter Property="Background" Value="{StaticResource ElCharcoal700Brush}"/>
-    <Setter Property="Foreground" Value="#FFF3E4"/>
+    <Setter Property="Foreground" Value="{StaticResource ElTextBrush}"/>
   </Style>
   <Style Selector="Button.el-row.selected Path.file">
     <Setter Property="Stroke" Value="{StaticResource ElGoldBrush}"/>

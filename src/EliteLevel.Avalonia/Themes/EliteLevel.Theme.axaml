@@ -1,17 +1,17 @@
-<!-- Elite Level Design System v2.0.0 for Avalonia 11.x. Generated from tokens.json; do not hand-edit values.
+<!-- Elite Level Design System v3.0.0 for Avalonia 11.x. Generated from tokens.json; do not hand-edit values.
      Merge into App.axaml: <ResourceInclude Source="avares://EliteLevel.Avalonia/Themes/EliteLevel.Theme.axaml"/>
      No backdrop blur is used anywhere. Gradients are layered Borders (see reference/avalonia.md). -->
 <ResourceDictionary xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
   <!-- Colors -->
   <Color x:Key="ElBackdrop">#272325</Color>
-  <Color x:Key="ElCharcoal950">#0D0708</Color>
-  <Color x:Key="ElCharcoal900">#131011</Color>
-  <Color x:Key="ElCharcoal850">#1B1718</Color>
-  <Color x:Key="ElCharcoal800">#1D191A</Color>
-  <Color x:Key="ElCharcoal750">#262123</Color>
-  <Color x:Key="ElCharcoal700">#2A2224</Color>
-  <Color x:Key="ElCharcoal600">#3A3335</Color>
+  <Color x:Key="ElCharcoal950">#0A0606</Color>
+  <Color x:Key="ElCharcoal900">#120808</Color>
+  <Color x:Key="ElCharcoal850">#1A0E0E</Color>
+  <Color x:Key="ElCharcoal800">#221212</Color>
+  <Color x:Key="ElCharcoal750">#2E1616</Color>
+  <Color x:Key="ElCharcoal700">#3A1C1C</Color>
+  <Color x:Key="ElCharcoal600">#462020</Color>
   <Color x:Key="ElOxblood950">#1A090B</Color>
   <Color x:Key="ElOxblood900">#26090C</Color>
   <Color x:Key="ElOxblood850">#2A0A0F</Color>
@@ -26,25 +26,46 @@
   <Color x:Key="ElGoldDim">#B48C28</Color>
   <Color x:Key="ElGoldWarm">#B9862E</Color>
   <Color x:Key="ElGoldGlow">#DEB440</Color>
-  <Color x:Key="ElGoldText">#F4E3B4</Color>
-  <Color x:Key="ElGoldEyebrow">#E6C766</Color>
-  <Color x:Key="ElText">#F2ECE6</Color>
-  <Color x:Key="ElTextStrong">#FFF6EC</Color>
+  <Color x:Key="ElGoldText">#E8C84A</Color>
+  <Color x:Key="ElGoldEyebrow">#D4AF37</Color>
+  <Color x:Key="ElText">#F0E8E0</Color>
+  <Color x:Key="ElTextStrong">#F0E8E0</Color>
   <Color x:Key="ElTextOnFeature">#FFF7EE</Color>
-  <Color x:Key="ElText2">#CDC2BC</Color>
-  <Color x:Key="ElText3">#A89C97</Color>
-  <Color x:Key="ElTextMuted">#8F8480</Color>
-  <Color x:Key="ElTextFaint">#6F6562</Color>
+  <Color x:Key="ElText2">#C8BAB0</Color>
+  <Color x:Key="ElText3">#907870</Color>
+  <Color x:Key="ElTextMuted">#9C8278</Color>
+  <Color x:Key="ElTextFaint">#584848</Color>
   <Color x:Key="ElTextOnGold">#1A1010</Color>
   <Color x:Key="ElSuccess">#238232</Color>
   <Color x:Key="ElInfo">#4682D2</Color>
   <Color x:Key="ElWarning">#D4AF37</Color>
   <Color x:Key="ElDanger">#B43232</Color>
   <Color x:Key="ElCaptionCloseHover">#C42B1C</Color>
-  <Color x:Key="ElBorderCard">#0AFFFFFF</Color>
-  <Color x:Key="ElBorderNavCard">#0DFFFFFF</Color>
-  <Color x:Key="ElDivider">#0DFFFFFF</Color>
-  <Color x:Key="ElBorderChip">#1AFFFFFF</Color>
+  <Color x:Key="ElGoldDark">#A08020</Color>
+  <Color x:Key="ElGoldBtnHi">#E2C25A</Color>
+  <Color x:Key="ElCrimson">#C41E3A</Color>
+  <Color x:Key="ElCrimsonHi">#D42040</Color>
+  <Color x:Key="ElCrimsonMid">#8B0018</Color>
+  <Color x:Key="ElCrimsonDeep">#4A000C</Color>
+  <Color x:Key="ElCrimsonEdge">#E03050</Color>
+  <Color x:Key="ElRecord">#E0304E</Color>
+  <Color x:Key="ElRecordIdleHi">#2A1A1A</Color>
+  <Color x:Key="ElRecordIdleMid">#160C0C</Color>
+  <Color x:Key="ElRecordIdleEdge">#7A2A2A</Color>
+  <Color x:Key="ElFrame">#5A2020</Color>
+  <Color x:Key="ElFrameToast">#4A2020</Color>
+  <Color x:Key="ElBorderCard">#381C1C</Color>
+  <Color x:Key="ElBorderControl">#2A1414</Color>
+  <Color x:Key="ElBorderButton">#461E1E</Color>
+  <Color x:Key="ElBorderToggle">#501E1E</Color>
+  <Color x:Key="ElToggleOff">#261414</Color>
+  <Color x:Key="ElSuccessText">#7FBF8A</Color>
+  <Color x:Key="ElDangerText">#E08080</Color>
+  <Color x:Key="ElStageHi">#180A0A</Color>
+  <Color x:Key="ElStageLo">#060202</Color>
+  <Color x:Key="ElBorderNavCard">#381C1C</Color>
+  <Color x:Key="ElDivider">#2A1414</Color>
+  <Color x:Key="ElBorderChip">#38D4AF37</Color>
   <Color x:Key="ElChipOnArt">#8C140E0F</Color>
   <Color x:Key="ElChipOnArtStrong">#99140E0F</Color>
   <Color x:Key="ElGhostOnFeature">#6B180A0C</Color>
@@ -52,6 +73,18 @@
   <Color x:Key="ElTextOnFeature3">#B8FFF0E4</Color>
   <Color x:Key="ElFocusRing">#E6D4AF37</Color>
   <Color x:Key="ElScrim">#9E080506</Color>
+  <Color x:Key="ElGoldFill">#14D4AF37</Color>
+  <Color x:Key="ElGoldEdge">#4CD4AF37</Color>
+  <Color x:Key="ElGoldSelect">#1FD4AF37</Color>
+  <Color x:Key="ElGoldSelectEdge">#59D4AF37</Color>
+  <Color x:Key="ElToggleOn">#59A08020</Color>
+  <Color x:Key="ElSuccessFill">#29238232</Color>
+  <Color x:Key="ElSuccessEdge">#66238232</Color>
+  <Color x:Key="ElCrimsonRing">#26C41E3A</Color>
+  <Color x:Key="ElRecordGlow">#B2E0304E</Color>
+  <Color x:Key="ElPanelTop">#B8321418</Color>
+  <Color x:Key="ElPanelBottom">#D9180F0F</Color>
+  <Color x:Key="ElInnerHighlight">#0AFFFFFF</Color>
 
   <!-- Brushes -->
   <SolidColorBrush x:Key="ElBackdropBrush" Color="{StaticResource ElBackdrop}"/>
@@ -91,7 +124,28 @@
   <SolidColorBrush x:Key="ElWarningBrush" Color="{StaticResource ElWarning}"/>
   <SolidColorBrush x:Key="ElDangerBrush" Color="{StaticResource ElDanger}"/>
   <SolidColorBrush x:Key="ElCaptionCloseHoverBrush" Color="{StaticResource ElCaptionCloseHover}"/>
+  <SolidColorBrush x:Key="ElGoldDarkBrush" Color="{StaticResource ElGoldDark}"/>
+  <SolidColorBrush x:Key="ElGoldBtnHiBrush" Color="{StaticResource ElGoldBtnHi}"/>
+  <SolidColorBrush x:Key="ElCrimsonBrush" Color="{StaticResource ElCrimson}"/>
+  <SolidColorBrush x:Key="ElCrimsonHiBrush" Color="{StaticResource ElCrimsonHi}"/>
+  <SolidColorBrush x:Key="ElCrimsonMidBrush" Color="{StaticResource ElCrimsonMid}"/>
+  <SolidColorBrush x:Key="ElCrimsonDeepBrush" Color="{StaticResource ElCrimsonDeep}"/>
+  <SolidColorBrush x:Key="ElCrimsonEdgeBrush" Color="{StaticResource ElCrimsonEdge}"/>
+  <SolidColorBrush x:Key="ElRecordBrush" Color="{StaticResource ElRecord}"/>
+  <SolidColorBrush x:Key="ElRecordIdleHiBrush" Color="{StaticResource ElRecordIdleHi}"/>
+  <SolidColorBrush x:Key="ElRecordIdleMidBrush" Color="{StaticResource ElRecordIdleMid}"/>
+  <SolidColorBrush x:Key="ElRecordIdleEdgeBrush" Color="{StaticResource ElRecordIdleEdge}"/>
+  <SolidColorBrush x:Key="ElFrameBrush" Color="{StaticResource ElFrame}"/>
+  <SolidColorBrush x:Key="ElFrameToastBrush" Color="{StaticResource ElFrameToast}"/>
   <SolidColorBrush x:Key="ElBorderCardBrush" Color="{StaticResource ElBorderCard}"/>
+  <SolidColorBrush x:Key="ElBorderControlBrush" Color="{StaticResource ElBorderControl}"/>
+  <SolidColorBrush x:Key="ElBorderButtonBrush" Color="{StaticResource ElBorderButton}"/>
+  <SolidColorBrush x:Key="ElBorderToggleBrush" Color="{StaticResource ElBorderToggle}"/>
+  <SolidColorBrush x:Key="ElToggleOffBrush" Color="{StaticResource ElToggleOff}"/>
+  <SolidColorBrush x:Key="ElSuccessTextBrush" Color="{StaticResource ElSuccessText}"/>
+  <SolidColorBrush x:Key="ElDangerTextBrush" Color="{StaticResource ElDangerText}"/>
+  <SolidColorBrush x:Key="ElStageHiBrush" Color="{StaticResource ElStageHi}"/>
+  <SolidColorBrush x:Key="ElStageLoBrush" Color="{StaticResource ElStageLo}"/>
   <SolidColorBrush x:Key="ElBorderNavCardBrush" Color="{StaticResource ElBorderNavCard}"/>
   <SolidColorBrush x:Key="ElDividerBrush" Color="{StaticResource ElDivider}"/>
   <SolidColorBrush x:Key="ElBorderChipBrush" Color="{StaticResource ElBorderChip}"/>
@@ -102,6 +156,18 @@
   <SolidColorBrush x:Key="ElTextOnFeature3Brush" Color="{StaticResource ElTextOnFeature3}"/>
   <SolidColorBrush x:Key="ElFocusRingBrush" Color="{StaticResource ElFocusRing}"/>
   <SolidColorBrush x:Key="ElScrimBrush" Color="{StaticResource ElScrim}"/>
+  <SolidColorBrush x:Key="ElGoldFillBrush" Color="{StaticResource ElGoldFill}"/>
+  <SolidColorBrush x:Key="ElGoldEdgeBrush" Color="{StaticResource ElGoldEdge}"/>
+  <SolidColorBrush x:Key="ElGoldSelectBrush" Color="{StaticResource ElGoldSelect}"/>
+  <SolidColorBrush x:Key="ElGoldSelectEdgeBrush" Color="{StaticResource ElGoldSelectEdge}"/>
+  <SolidColorBrush x:Key="ElToggleOnBrush" Color="{StaticResource ElToggleOn}"/>
+  <SolidColorBrush x:Key="ElSuccessFillBrush" Color="{StaticResource ElSuccessFill}"/>
+  <SolidColorBrush x:Key="ElSuccessEdgeBrush" Color="{StaticResource ElSuccessEdge}"/>
+  <SolidColorBrush x:Key="ElCrimsonRingBrush" Color="{StaticResource ElCrimsonRing}"/>
+  <SolidColorBrush x:Key="ElRecordGlowBrush" Color="{StaticResource ElRecordGlow}"/>
+  <SolidColorBrush x:Key="ElPanelTopBrush" Color="{StaticResource ElPanelTop}"/>
+  <SolidColorBrush x:Key="ElPanelBottomBrush" Color="{StaticResource ElPanelBottom}"/>
+  <SolidColorBrush x:Key="ElInnerHighlightBrush" Color="{StaticResource ElInnerHighlight}"/>
 
   <!-- Feature card: three stacked Borders in one Panel, bottom to top: FeatureBase, FeatureGoldGlow, FeatureOxbloodGlow.
        160deg CSS linear maps to StartPoint 33%,3% EndPoint 67%,97% on a near-square card. -->
@@ -155,6 +221,45 @@
   </RadialGradientBrush>
   <!-- Film grain: tile assets/grain-256.png at Opacity 0.07 over art only -->
   <ImageBrush x:Key="ElGrainBrush" Source="avares://EliteLevel.Avalonia/Assets/grain-256.png" TileMode="Tile" DestinationRect="0,0,256,256" Opacity="0.07"/>
+
+  <!-- v3 surfaces: panel, primary and crimson buttons, stage, toast, floating bar, progress -->
+  <LinearGradientBrush x:Key="ElGradPanel" StartPoint="0%,0%" EndPoint="100%,100%">  <!-- layer over ElCharcoal900Brush -->
+    <GradientStop Offset="0" Color="#B8321418"/>
+    <GradientStop Offset="1" Color="#D9180F0F"/>
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="ElGradGoldButton" StartPoint="0%,0%" EndPoint="100%,100%">
+    <GradientStop Offset="0" Color="#E2C25A"/>
+    <GradientStop Offset="1" Color="#B48C28"/>
+  </LinearGradientBrush>
+  <RadialGradientBrush x:Key="ElGradCrimsonButton" Center="38%,32%" GradientOrigin="38%,32%" RadiusX="80%" RadiusY="80%">
+    <GradientStop Offset="0" Color="#D42040"/>
+    <GradientStop Offset="0.55" Color="#8B0018"/>
+    <GradientStop Offset="1" Color="#4A000C"/>
+  </RadialGradientBrush>
+  <RadialGradientBrush x:Key="ElGradRecordButton" Center="38%,32%" GradientOrigin="38%,32%" RadiusX="80%" RadiusY="80%">
+    <GradientStop Offset="0" Color="#2A1A1A"/>
+    <GradientStop Offset="0.6" Color="#160C0C"/>
+    <GradientStop Offset="1" Color="#0C0606"/>
+  </RadialGradientBrush>
+  <RadialGradientBrush x:Key="ElGradStage" Center="50%,40%" GradientOrigin="50%,40%" RadiusX="70%" RadiusY="70%">
+    <GradientStop Offset="0" Color="#180A0A"/>
+    <GradientStop Offset="1" Color="#060202"/>
+  </RadialGradientBrush>
+  <LinearGradientBrush x:Key="ElGradToast" StartPoint="0%,0%" EndPoint="100%,100%">
+    <GradientStop Offset="0" Color="#120808"/>
+    <GradientStop Offset="0.6" Color="#1C0E0E"/>
+    <GradientStop Offset="1" Color="#0E0808"/>
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="ElGradFloatingBar" StartPoint="50%,0%" EndPoint="50%,100%">
+    <GradientStop Offset="0" Color="#1A0E0E"/>
+    <GradientStop Offset="1" Color="#0A0606"/>
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="ElGradProgress" StartPoint="0%,50%" EndPoint="100%,50%">
+    <GradientStop Offset="0" Color="#A08020"/>
+    <GradientStop Offset="1" Color="#D4AF37"/>
+  </LinearGradientBrush>
+  <Thickness x:Key="ElFrameThickness">1</Thickness>
+  <Thickness x:Key="ElToastFrameThickness">1,1,1,1</Thickness>
 
   <!-- Radii -->
   <CornerRadius x:Key="ElRadiusWindow">28</CornerRadius>
@@ -216,18 +321,21 @@
   <Thickness x:Key="ElChipPadding">14,0,14,0</Thickness>
   <Thickness x:Key="ElButtonPadding">22,0,22,0</Thickness>
 
-  <!-- Shadows and coloured glows (BoxShadows parses "x y blur spread color", comma separated) -->
-  <BoxShadows x:Key="ElShadowWindow">0 40 90 0 #8C000000, 0 0 0 1 #0AFFFFFF</BoxShadows>
+  <!-- Shadows and coloured glows (BoxShadows parses "x y blur spread color", comma separated; "inset" prefix allowed) -->
+  <BoxShadows x:Key="ElShadowWindow">0 40 90 0 #8C000000, 0 0 0 1 #FF5A2020</BoxShadows>
   <BoxShadows x:Key="ElShadowHeroGlow">0 26 60 -18 #8C8A2A35</BoxShadows>
   <BoxShadows x:Key="ElShadowFeatureGlow">0 22 50 -16 #8CB45A28</BoxShadows>
-  <BoxShadows x:Key="ElShadowGoldButton">0 8 22 -6 #99D4AF37</BoxShadows>
+  <BoxShadows x:Key="ElShadowGoldButton">0 2 10 0 #2ED4AF37</BoxShadows>
   <BoxShadows x:Key="ElShadowNavMarker">0 0 14 0 #8CD4AF37</BoxShadows>
-  <BoxShadows x:Key="ElShadowDotRing">0 0 0 2 #FF1D191A</BoxShadows>
-  <BoxShadows x:Key="ElShadowMenu">0 18 40 -12 #99000000, 0 0 0 1 #0DFFFFFF</BoxShadows>
+  <BoxShadows x:Key="ElShadowDotRing">0 0 0 2 #FF221212</BoxShadows>
+  <BoxShadows x:Key="ElShadowMenu">0 18 40 -12 #99000000, 0 0 0 1 #FF4A2020</BoxShadows>
+  <BoxShadows x:Key="ElShadowCard">0 4 24 0 #59000000, inset 0 1 0 0 #0AFFFFFF</BoxShadows>
+  <BoxShadows x:Key="ElShadowCrimsonButton">0 0 0 4 #26C41E3A, 0 4 16 0 #99000000</BoxShadows>
+  <BoxShadows x:Key="ElShadowFloatingBar">0 0 0 1 #FF5A2020, 0 4 16 0 #B3000000</BoxShadows>
 
   <!-- Fonts: static TTFs shipped under OFL in Assets/Fonts (see fonts/README.md) -->
-  <FontFamily x:Key="ElFontUi">avares://EliteLevel.Avalonia/Assets/Fonts#Plus Jakarta Sans, Inter, Segoe UI, sans-serif</FontFamily>
-  <FontFamily x:Key="ElFontMono">avares://EliteLevel.Avalonia/Assets/Fonts#DM Mono, JetBrains Mono, Cascadia Mono, Consolas, monospace</FontFamily>
+  <FontFamily x:Key="ElFontUi">avares://EliteLevel.Avalonia/Assets/Fonts#Plus Jakarta Sans</FontFamily>
+  <FontFamily x:Key="ElFontMono">avares://EliteLevel.Avalonia/Assets/Fonts#DM Mono</FontFamily>
   <x:Double x:Key="ElTypeHeroSize">54</x:Double>
   <FontWeight x:Key="ElTypeHeroWeight">800</FontWeight>
   <x:Double x:Key="ElTypeHeroTracking">-1.89</x:Double> <!-- TextBlock.LetterSpacing in px (-0.035em) -->

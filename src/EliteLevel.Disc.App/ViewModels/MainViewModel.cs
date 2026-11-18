@@ -74,10 +74,19 @@ public partial class MainViewModel : ObservableObject
 
         OpenCount = Recent.Count;
         RebuildVisibleRecent();
-        VersionText = "Version " + ProductVersion();
+        var version = ProductVersion();
+        VersionText = "Version " + version;
+        VersionLabel = "v" + version;
+        CreditLine = "Discfolio " + VersionLabel + " · by Elite Level Software";
     }
 
     public string VersionText { get; }
+
+    public string VersionLabel { get; }
+
+    public string CreditLine { get; }
+
+    public string StatusLine => HasImage && !string.IsNullOrWhiteSpace(VolumeTitle) ? VolumeTitle : "No image open";
 
     public ObservableCollection<FileRow> Rows { get; } = [];
     public ObservableCollection<RecentItem> Recent { get; } = [];
@@ -112,6 +121,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool isExtracting;
     [ObservableProperty] private bool showExtractDialog;
     [ObservableProperty] private bool showWelcome;
+    [ObservableProperty] private bool showAbout;
     [ObservableProperty] private string protectedSummary = "Default extract skips system-update folders and protected paths such as EBOOT.BIN, PS3_UPDATE and LICDIR.";
     [ObservableProperty] private bool reduceEffects;
     [ObservableProperty] private bool showSystemUpdate;
@@ -209,6 +219,12 @@ public partial class MainViewModel : ObservableObject
         _settings.WelcomeSeen = true;
         Persist();
     }
+
+    [RelayCommand]
+    private void OpenAbout() => ShowAbout = true;
+
+    [RelayCommand]
+    private void CloseAbout() => ShowAbout = false;
 
     [RelayCommand]
     private void BeginExtractAll()
@@ -460,6 +476,10 @@ public partial class MainViewModel : ObservableObject
     }
 
     partial void OnPageChanged(string value) => NotifyVisibility();
+
+    partial void OnHasImageChanged(bool value) => OnPropertyChanged(nameof(StatusLine));
+
+    partial void OnVolumeTitleChanged(string value) => OnPropertyChanged(nameof(StatusLine));
 
     partial void OnDriveNoticeChanged(string value) => OnPropertyChanged(nameof(HasDriveNotice));
 
@@ -1338,6 +1358,7 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowEmpty));
         OnPropertyChanged(nameof(ShowError));
         OnPropertyChanged(nameof(ShowBrowser));
+        OnPropertyChanged(nameof(StatusLine));
     }
 }
 

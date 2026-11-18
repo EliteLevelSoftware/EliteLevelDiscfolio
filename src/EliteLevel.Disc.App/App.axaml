@@ -10,7 +10,11 @@
     </ResourceDictionary>
   </Application.Resources>
   <Application.Styles>
-    <FluentTheme />
+    <FluentTheme>
+      <FluentTheme.Palettes>
+        <ColorPaletteResources x:Key="Dark" Accent="{StaticResource ElGold}"/>
+      </FluentTheme.Palettes>
+    </FluentTheme>
     <StyleInclude Source="avares://EliteLevel.Avalonia/Themes/Controls.axaml"/>
   </Application.Styles>
 </Application>
