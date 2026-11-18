@@ -6,6 +6,7 @@ using EliteLevel.Disc.Core.Extract;
 using EliteLevel.Disc.Core.Hash;
 using EliteLevel.Disc.Core.IO;
 using EliteLevel.Disc.Core.Search;
+using EliteLevel.Disc.Core.Titles;
 
 namespace EliteLevel.Disc.Cli;
 
@@ -146,6 +147,13 @@ public static class CliHost
         detect.Options.Add(json);
         detect.SetAction((result, token) => DetectAsync(result.GetValue(image)!, result.GetValue(json), token));
 
+        var artOut = new Option<string>("--out") { Description = "Folder to write the icon and banner into" };
+        var art = new Command("art", "Export the title icon and banner");
+        art.Arguments.Add(image);
+        art.Options.Add(artOut);
+        art.Options.Add(json);
+        art.SetAction((result, token) => ArtAsync(result.GetValue(image)!, result.GetValue(artOut), result.GetValue(json), token));
+
         var root = new RootCommand("EliteLevel Discfolio. Read-only explorer for disc images and folder dumps.");
         root.Subcommands.Add(info);
         root.Subcommands.Add(list);
@@ -154,6 +162,7 @@ public static class CliHost
         root.Subcommands.Add(hash);
         root.Subcommands.Add(search);
         root.Subcommands.Add(detect);
+        root.Subcommands.Add(art);
         return root;
     }
 
@@ -162,6 +171,8 @@ public static class CliHost
         return await WithImageAsync(image, showSystem, async (disc, _) =>
         {
             var id = disc.Identity;
+            var meta = TitleMetadataReader.Read(disc);
+            var title = TitleMetadataReader.ReadTitle(meta) ?? id.VolumeLabel ?? id.SourceName;
             if (json)
             {
                 WriteJson(new
@@ -169,6 +180,11 @@ public static class CliHost
                     format = id.FormatId,
                     formatName = id.FormatDisplayName,
                     volumeLabel = id.VolumeLabel,
+                    title,
+                    titleId = meta.TitleId,
+                    version = meta.Version,
+                    category = meta.Category,
+                    parentalLevel = meta.ParentalLevel,
                     platform = id.Platform,
                     layout = id.Layout,
                     videoPartition = id.VideoPartition,
@@ -177,14 +193,42 @@ public static class CliHost
                     @protected = id.ProtectedCount,
                     directories = id.DirectoryCount,
                     bytes = id.TotalBytes,
-                    source = id.SourceName
+                    source = id.SourceName,
+                    icon = meta.IconName,
+                    banner = meta.BannerName
                 });
             }
             else
             {
-                Console.WriteLine(id.VolumeLabel ?? id.SourceName);
+                Console.WriteLine(title);
                 Line("Format", id.FormatDisplayName);
                 Line("Platform", id.Platform ?? "Unknown");
+                if (!string.IsNullOrWhiteSpace(id.VolumeLabel) && !id.VolumeLabel.Equals(title, StringComparison.Ordinal))
+                {
+                    Line("Volume", id.VolumeLabel);
+                }
+
+                if (!string.IsNullOrWhiteSpace(meta.TitleId))
+                {
+                    Line("Title ID", meta.TitleId);
+                }
+
+                if (!string.IsNullOrWhiteSpace(meta.Version))
+                {
+                    Line("Version", meta.Version);
+                }
+
+                if (!string.IsNullOrWhiteSpace(meta.Category))
+                {
+                    Line("Category", meta.Category);
+                }
+
+                if (meta.ParentalLevel is int parental)
+                {
+                    Line("Parental", parental.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                }
+
+                Line("Art", ArtSummary(meta));
                 Line("Layout", id.Layout ?? "Single partition");
                 Line("Files", TextFormat.FileSummary(id.FileCount, id.ProtectedCount));
                 Line("Directories", TextFormat.Count(id.DirectoryCount));
@@ -405,6 +449,73 @@ public static class CliHost
 
             return 0;
         }, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<int> ArtAsync(string image, string? output, bool json, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(output))
+        {
+            return WriteError(1, "user", "art needs --out.");
+        }
+
+        return await WithImageAsync(image, false, async (disc, _) =>
+        {
+            var meta = TitleMetadataReader.Read(disc);
+            if (!meta.HasIcon && !meta.HasBanner)
+            {
+                return WriteError(1, "user", "This image has no title art.");
+            }
+
+            Directory.CreateDirectory(output);
+            string? icon = null;
+            string? banner = null;
+            if (meta.Icon is { Length: > 0 } iconBytes)
+            {
+                icon = "icon" + TitleMetadataReader.ArtExtension(iconBytes);
+                await File.WriteAllBytesAsync(Path.Combine(output, icon), iconBytes, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (meta.Banner is { Length: > 0 } bannerBytes)
+            {
+                banner = "banner" + TitleMetadataReader.ArtExtension(bannerBytes);
+                await File.WriteAllBytesAsync(Path.Combine(output, banner), bannerBytes, cancellationToken).ConfigureAwait(false);
+            }
+
+            var destination = Path.GetFullPath(output);
+            if (json)
+            {
+                WriteJson(new { destination, icon, banner });
+            }
+            else
+            {
+                if (icon is not null)
+                {
+                    Console.WriteLine("Icon   " + Path.Combine(destination, icon));
+                }
+
+                if (banner is not null)
+                {
+                    Console.WriteLine("Banner " + Path.Combine(destination, banner));
+                }
+            }
+
+            return 0;
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static string ArtSummary(TitleMetadata meta)
+    {
+        if (meta.IconName is null && meta.BannerName is null)
+        {
+            return "none";
+        }
+
+        if (meta.IconName is not null && meta.BannerName is not null)
+        {
+            return meta.IconName + ", " + meta.BannerName;
+        }
+
+        return meta.IconName ?? meta.BannerName!;
     }
 
     private static Task<int> DetectAsync(string image, bool json, CancellationToken cancellationToken)

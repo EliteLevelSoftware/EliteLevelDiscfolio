@@ -32,7 +32,9 @@ Replace that digest with the hash from `SHA256SUMS.txt` when a release is publis
 
 Open an ISO 9660 or Joliet image, an Xbox or Xbox 360 XDVDFS image (plain, XGD1, XGD2, XGD3, or a Redump layout with a video partition in front), or a folder dump. Detection uses the contents of the file, not the extension. A Nintendo Switch NSP or XCI is recognized and refused. Switch images are not supported yet.
 
-The window shows the volume, the file tree, and recent images on this machine. Drag an image onto the window to open it.
+The window shows the title, the file tree, and recent images on this machine. A PlayStation 3 image uses the title and title ID from `PARAM.SFO`, `ICON0.PNG` on the library tile, and `PIC1.PNG` (or `PIC0.PNG`) on the banner. Xbox 360 reads the title and title ID from `default.xex`, including the embedded title image, and `nxeart` when that file is present. Original Xbox reads the certificate and `$$XTIMAGE` section of `default.xbe` when that section holds a PNG or JPEG. Anything else keeps the volume label. A plain ISO can also use an `autorun.inf` icon when that line points at an image file rather than an executable resource.
+
+Art and the title are cached in the Discfolio data folder, keyed by the image path, size and modification time, so the library can show them again without opening the disc. The image itself is not modified. Drag an image onto the window to open it. Search matches file names, the title and the title ID.
 
 ## Extract
 
@@ -54,6 +56,7 @@ discfolio list game.iso --path /PS3_GAME/USRDIR --long
 discfolio extract game.iso --out ./out --pattern "*.png" --skip-existing
 discfolio hash game.iso --manifest game.sha256
 discfolio search game.iso ICON0
+discfolio art game.iso --out ./art
 ```
 
 `--json` prints indented JSON on standard output, including failures. A failure looks like this, and the process exit code is unchanged:
@@ -70,7 +73,7 @@ discfolio search game.iso ICON0
 
 Exit codes are `0` success, `1` user error (`kind` is `user`), `2` unsupported image (`kind` is `unsupported`), and `3` reserved for a later release that needs keys (`kind` would be `needs-keys`).
 
-`info` reports the visible file count. When the default extract will skip protected paths, that line also reports them, for example `22 files, plus 150 protected system entries skipped on extract`. The extra number includes files under a hidden `$SystemUpdate` folder. `extract` uses the same definition for its protected count. See [docs/user-guide.md](docs/user-guide.md).
+`info` reports the title, title ID, version and which art was found, then the visible file count. When the default extract will skip protected paths, that line also reports them, for example `22 files, plus 150 protected system entries skipped on extract`. The extra number includes files under a hidden `$SystemUpdate` folder. `extract` uses the same definition for its protected count. `art --out` writes `icon` and `banner` files into the folder you name. See [docs/user-guide.md](docs/user-guide.md).
 
 ## Build
 

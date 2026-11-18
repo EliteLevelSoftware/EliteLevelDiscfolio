@@ -22,6 +22,12 @@ public partial class HeroCard : UserControl
     public static readonly StyledProperty<string?> MetaProperty =
         AvaloniaProperty.Register<HeroCard, string?>(nameof(Meta));
 
+    public static readonly StyledProperty<string?> IconProperty =
+        AvaloniaProperty.Register<HeroCard, string?>(nameof(Icon));
+
+    public static readonly StyledProperty<string?> BannerProperty =
+        AvaloniaProperty.Register<HeroCard, string?>(nameof(Banner));
+
     public HeroCard()
     {
         InitializeComponent();
@@ -59,12 +65,26 @@ public partial class HeroCard : UserControl
         set => SetValue(MetaProperty, value);
     }
 
+    /// <summary>Cached icon, used as a softened background when no banner was found.</summary>
+    public string? Icon
+    {
+        get => GetValue(IconProperty);
+        set => SetValue(IconProperty, value);
+    }
+
+    /// <summary>Cached banner, such as a PS3 PIC1 image.</summary>
+    public string? Banner
+    {
+        get => GetValue(BannerProperty);
+        set => SetValue(BannerProperty, value);
+    }
+
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == SeedProperty)
+        if (change.Property == SeedProperty || change.Property == IconProperty || change.Property == BannerProperty)
         {
-            ArtImage.Source = CoverArt.Render(Seed, 960, 640);
+            ArtImage.Source = TitleArt.LoadBanner(Banner, Icon, 960, 640) ?? CoverArt.Render(Seed, 960, 640);
         }
         else if (change.Property == TitleProperty)
         {

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0
+
+- Library tiles use the icon from the image. The open banner uses PIC1 (or PIC0, or a softened icon) and the side card shows the title and the title ID. PlayStation 3 reads PARAM.SFO, ICON0.PNG and PIC1.PNG. Xbox 360 reads the default.xex execution info and the embedded XDBF title and image, and nxeart when that file is present. Original Xbox reads the default.xbe certificate and the $$XTIMAGE section when it holds a PNG or JPEG. Other ISO 9660 images keep the volume label, and a simple autorun.inf icon is used when the icon line points at an image file.
+- Extracted art and metadata are cached in the Discfolio data folder, keyed by path, size and modification time. The image itself is not modified.
+- Search matches the title and the title ID as well as file names.
+- `info` prints the title, title ID, version and which art was found. `art --out` writes the icon and banner.
+- Tests keep settings and the library cache in a temporary directory.
+
 ## 0.1.1
 
 - Unsupported files name only the formats this version can read: ISO 9660/Joliet (including PS3), Xbox and Xbox 360 XDVDFS, and folder dumps. The list is built from the registered readers. An NSP or XCI is reported as a Switch image, which is not supported yet. The exit code is still 2.

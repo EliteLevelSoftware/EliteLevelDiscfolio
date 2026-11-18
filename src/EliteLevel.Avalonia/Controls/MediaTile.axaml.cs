@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Media.Imaging;
 
 namespace EliteLevel.Avalonia.Controls;
 
@@ -14,6 +13,9 @@ public partial class MediaTile : UserControl
 
     public static readonly StyledProperty<string?> MetaProperty =
         AvaloniaProperty.Register<MediaTile, string?>(nameof(Meta));
+
+    public static readonly StyledProperty<string?> IconProperty =
+        AvaloniaProperty.Register<MediaTile, string?>(nameof(Icon));
 
     public MediaTile()
     {
@@ -38,12 +40,19 @@ public partial class MediaTile : UserControl
         set => SetValue(MetaProperty, value);
     }
 
+    /// <summary>Cached icon file. Generated art is used when this is empty.</summary>
+    public string? Icon
+    {
+        get => GetValue(IconProperty);
+        set => SetValue(IconProperty, value);
+    }
+
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == SeedProperty)
+        if (change.Property == SeedProperty || change.Property == IconProperty)
         {
-            ArtImage.Source = CoverArt.Render(Seed, 360, 480);
+            ArtImage.Source = TitleArt.Load(Icon) ?? CoverArt.Render(Seed, 360, 480);
         }
         else if (change.Property == TitleProperty)
         {

@@ -10,6 +10,12 @@ dotnet run --project src/EliteLevel.Disc.App
 
 Drop an image on the window, or use Open an image. Ctrl+O opens a file, Ctrl+K focuses search, Ctrl+E extracts the selection, Ctrl+Shift+E extracts everything, and Ctrl+H hashes the selected file. On macOS the same shortcuts use Command.
 
+Search matches file names, the title and the title ID. The library tile uses the icon from the image. The banner uses the wide art when the image has it, or a softened icon, and generated art when neither is present. The side card shows the title and, in a monospace line, the title ID.
+
+PlayStation 3 images and folder dumps with a `PS3_GAME` directory are read from `PARAM.SFO` (`TITLE`, `TITLE_ID`, `APP_VER` or `VERSION`, `CATEGORY`, `PARENTAL_LEVEL`), `ICON0.PNG`, and `PIC1.PNG` (`PIC0.PNG` when `PIC1.PNG` is absent). Xbox 360 reads the title ID and version from the `default.xex` execution info, and the title and title image from the embedded XDBF resource. `nxeart` is used as banner art when it is an image. Original Xbox reads the title and title ID from the `default.xbe` certificate, and the title image from `$$XTIMAGE` when that section contains a PNG or JPEG. A plain ISO keeps the volume label. If `autorun.inf` has an `icon=` line that points at an image file, that file is the icon. An icon line such as `setup.exe,0` is left unused.
+
+The bytes are read in memory. Art and the title are then stored in the Discfolio data folder (the `EliteLevel/Discfolio` folder under the account's application data), keyed by path, size and modification time. Reopening the library uses that cache. Nothing is written next to the image, and the image is not modified.
+
 Extract asks for a destination. Skip files that already match is on by default: an existing file of the same size is left in place and counted as success. Protected paths are listed in the dialog and skipped unless you include them. Included protected files are copied byte for byte and are not decrypted.
 
 ## Command line
@@ -20,6 +26,7 @@ dotnet run --project src/EliteLevel.Disc.Cli -- list game.iso --path /PS3_GAME -
 dotnet run --project src/EliteLevel.Disc.Cli -- extract game.iso --out ./out --pattern "*.png" --skip-existing
 dotnet run --project src/EliteLevel.Disc.Cli -- hash game.iso --manifest game.sha256
 dotnet run --project src/EliteLevel.Disc.Cli -- search game.iso ICON0
+dotnet run --project src/EliteLevel.Disc.Cli -- art game.iso --out ./art
 ```
 
 Exit codes:
@@ -45,7 +52,9 @@ Exit codes:
 
 Without `--json`, the same message is written to standard error.
 
-`info` prints the visible file count. If the default extract will skip protected paths, the files line also names that count, for example `22 files, plus 150 protected system entries skipped on extract`. With `--json`, `files` is the visible count and `protected` is the skipped count. `extract` reports that same protected count for a full extract: it includes `EBOOT.BIN`, `PS3_UPDATE`, `LICDIR`, and files under `$SystemUpdate`, including when that folder is hidden from the listing. `--show-system` lists the folder and does not change the protected count. `--include-protected` copies those bytes unchanged and reports protected 0 for that run.
+`info` prints the title, then the title ID, version, category, parental level and art when those were found. The art line names the files inside the image, for example `ICON0.PNG, PIC1.PNG`, or `none`. With `--json` the same values are `title`, `titleId`, `version`, `category`, `parentalLevel`, `icon` and `banner`. `info` also prints the visible file count. If the default extract will skip protected paths, the files line also names that count, for example `22 files, plus 150 protected system entries skipped on extract`. With `--json`, `files` is the visible count and `protected` is the skipped count. `extract` reports that same protected count for a full extract: it includes `EBOOT.BIN`, `PS3_UPDATE`, `LICDIR`, and files under `$SystemUpdate`, including when that folder is hidden from the listing. `--show-system` lists the folder and does not change the protected count. `--include-protected` copies those bytes unchanged and reports protected 0 for that run.
+
+`art --out <folder>` writes the icon and banner into that folder as `icon.png` (or the matching image extension) and `banner.png`. The folder is the only place those files are written. If the image has no title art, the command exits 1.
 
 An unrecognized file names only the readers this version has: ISO 9660/Joliet (including PS3), Xbox and Xbox 360 XDVDFS, and folder dumps. NSP and XCI files are a different message: Switch images are not supported yet. Both still exit 2.
 
@@ -55,4 +64,4 @@ An unrecognized file names only the readers this version has: ISO 9660/Joliet (i
 dotnet test
 ```
 
-Tests build tiny ISO 9660 and XDVDFS images in a temporary directory. They do not use retail game data.
+Tests build tiny ISO 9660 and XDVDFS images, and tiny PARAM.SFO, PNG, XEX and XBE structures, in a temporary directory. They do not use retail game data. Desktop tests keep settings and the art cache in a temporary directory as well, so a sample image is not added to the library on this machine.

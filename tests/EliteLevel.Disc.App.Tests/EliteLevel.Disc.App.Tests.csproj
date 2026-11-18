@@ -14,4 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\EliteLevel.Disc.App\EliteLevel.Disc.App.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\EliteLevel.Disc.Core.Tests\SyntheticTitles.cs" Link="SyntheticTitles.cs" />
+  </ItemGroup>
 </Project>

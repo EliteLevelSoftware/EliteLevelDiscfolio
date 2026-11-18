@@ -173,7 +173,8 @@
             <Grid IsVisible="{Binding ShowBrowser}" RowDefinitions="330,*">
               <Grid ColumnDefinitions="*,322">
                 <controls:HeroCard Margin="0,0,20,0"
-                                   Seed="{Binding ArtSeed}" Title="{Binding VolumeTitle}" Eyebrow="{Binding Eyebrow}"
+                                   Seed="{Binding ArtSeed}" Icon="{Binding IconPath}" Banner="{Binding BannerPath}"
+                                   Title="{Binding VolumeTitle}" Eyebrow="{Binding Eyebrow}"
                                    Chips="{Binding ChipLine}" Meta="{Binding MetaLine}"/>
                 <controls:FeatureCard Grid.Column="1">
                   <DockPanel>
@@ -185,7 +186,9 @@
                     </Grid>
                     <StackPanel>
                       <TextBlock Text="{Binding DetailTitle}" FontSize="22" FontWeight="Bold" Foreground="#FFF7EE" TextTrimming="CharacterEllipsis"/>
-                      <TextBlock Text="{Binding DetailSubtitle}" FontSize="12.5" Foreground="#C7FFF0E4" Margin="0,4,0,14" TextTrimming="CharacterEllipsis"/>
+                      <TextBlock Text="{Binding DetailSubtitle}" FontSize="12.5" Foreground="#C7FFF0E4" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
+                      <TextBlock Text="{Binding TitleId}" Classes="mono" FontSize="12.5" Foreground="#C7FFF0E4" Margin="0,4,0,14"
+                                 IsVisible="{Binding HasTitleId}" TextTrimming="CharacterEllipsis"/>
                       <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
                         <TextBlock Text="Size" FontSize="12.5" Foreground="#B8FFF0E4"/>
                         <TextBlock Grid.Column="1" Text="{Binding SizeText}" FontWeight="SemiBold" Foreground="#FFF7EE"/>
@@ -210,8 +213,8 @@
                     </Button>
                   </Grid>
                   <TextBlock Text="No recent images" Foreground="{StaticResource ElTextMutedBrush}"
-                             IsVisible="{Binding !Recent.Count}"/>
-                  <ItemsControl ItemsSource="{Binding Recent}">
+                             IsVisible="{Binding !VisibleRecent.Count}"/>
+                  <ItemsControl ItemsSource="{Binding VisibleRecent}">
                     <ItemsControl.ItemsPanel>
                       <ItemsPanelTemplate>
                         <UniformGrid Columns="4"/>
@@ -220,7 +223,7 @@
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:RecentItem">
                         <Button Classes="el-tile" Margin="0,0,12,0" MinHeight="220" Click="OnRecent" Tag="{Binding Path}">
-                          <controls:MediaTile Seed="{Binding Seed}" Title="{Binding Title}" Meta="{Binding Meta}"/>
+                          <controls:MediaTile Seed="{Binding Seed}" Icon="{Binding IconPath}" Title="{Binding Title}" Meta="{Binding Meta}"/>
                         </Button>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
@@ -267,7 +270,7 @@
                   <Button Classes="el-primary" Content="Open image" Click="OnOpenFile"/>
                   <Button Classes="el-secondary" Content="Open folder" Click="OnOpenFolder"/>
                 </StackPanel>
-                <ItemsControl ItemsSource="{Binding Recent}">
+                <ItemsControl ItemsSource="{Binding VisibleRecent}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:RecentItem">
                       <Button Classes="el-row" HorizontalAlignment="Stretch" Click="OnRecent" Tag="{Binding Path}" Margin="0,4">
@@ -345,7 +348,7 @@
               <StackPanel Spacing="12" MaxWidth="680">
                 <controls:ProductMark Width="64" Height="64" HorizontalAlignment="Left"/>
                 <TextBlock Text="EliteLevel Discfolio" FontSize="22" FontWeight="Bold"/>
-                <TextBlock Text="Version 0.1.1" Classes="mono" Foreground="{StaticResource ElTextMutedBrush}"/>
+                <TextBlock Text="{Binding VersionText}" Classes="mono" Foreground="{StaticResource ElTextMutedBrush}"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
                            Text="Discfolio browses disc images and folder dumps you already have. It is read-only: the source is never modified. It does not include encryption keys or game data. Use it only with copies you are allowed to possess."/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"

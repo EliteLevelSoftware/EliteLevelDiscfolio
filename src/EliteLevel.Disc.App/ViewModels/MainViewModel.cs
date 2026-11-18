@@ -7,12 +7,14 @@ using EliteLevel.Disc.Core.Extract;
 using EliteLevel.Disc.Core.Hash;
 using EliteLevel.Disc.Core.IO;
 using EliteLevel.Disc.Core.Search;
+using EliteLevel.Disc.Core.Titles;
 
 namespace EliteLevel.Disc.App.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
     private readonly AppSettings _settings;
+    private readonly TitleArtCache _cache;
     private IDiscImage? _image;
     private readonly Dictionary<string, IDiscNode> _index = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _expanded = new(StringComparer.OrdinalIgnoreCase);
@@ -28,16 +30,41 @@ public partial class MainViewModel : ObservableObject
         HashMd5 = _settings.HashMd5;
         ExtractDirectory = _settings.ExtractDirectory ?? "";
         SkipExisting = true;
+        _cache = new TitleArtCache(SettingsStore.CacheDirectory);
         foreach (var recent in _settings.Recent)
         {
-            Recent.Add(new RecentItem(recent.Path, recent.Title, recent.Meta));
+            var cached = _cache.TryGet(recent.Path);
+            var title = recent.Title;
+            var titleId = recent.TitleId ?? "";
+            string? icon = null;
+            if (cached is not null)
+            {
+                if (!string.IsNullOrWhiteSpace(cached.Title))
+                {
+                    title = cached.Title;
+                }
+
+                if (!string.IsNullOrWhiteSpace(cached.TitleId))
+                {
+                    titleId = cached.TitleId;
+                }
+
+                icon = cached.IconPath;
+            }
+
+            Recent.Add(new RecentItem(recent.Path, title, recent.Meta, titleId, icon));
         }
 
         OpenCount = Recent.Count;
+        RebuildVisibleRecent();
+        VersionText = "Version " + ProductVersion();
     }
+
+    public string VersionText { get; }
 
     public ObservableCollection<FileRow> Rows { get; } = [];
     public ObservableCollection<RecentItem> Recent { get; } = [];
+    public ObservableCollection<RecentItem> VisibleRecent { get; } = [];
 
     [ObservableProperty] private string page = "library";
     [ObservableProperty] private bool isLoading;
@@ -77,9 +104,14 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private int extractCount;
     [ObservableProperty] private int verifyCount;
     [ObservableProperty] private string artSeed = "discfolio";
+    [ObservableProperty] private string? iconPath;
+    [ObservableProperty] private string? bannerPath;
+    [ObservableProperty] private string titleId = "";
     [ObservableProperty] private string platformTag = "";
     [ObservableProperty] private string sourceName = "";
     [ObservableProperty] private bool hasNotification;
+
+    public bool HasTitleId => !string.IsNullOrWhiteSpace(TitleId);
 
     public bool IsLibrary => Page == "library";
     public bool IsOpenImages => Page == "open";
@@ -213,7 +245,9 @@ public partial class MainViewModel : ObservableObject
             HashDisplay = "Not computed";
             Sha1Full = null;
             Md5Full = null;
-            ApplyIdentity(next.Identity, path);
+            var metadata = TitleMetadataReader.Read(next);
+            var cached = _cache.Store(path, metadata);
+            ApplyIdentity(next.Identity, path, metadata, cached);
             RebuildRows();
             Remember(path, next.Identity);
             HasImage = true;
@@ -356,7 +390,13 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnPageChanged(string value) => NotifyVisibility();
 
-    partial void OnSearchTextChanged(string value) => RebuildRows();
+    partial void OnSearchTextChanged(string value)
+    {
+        RebuildRows();
+        RebuildVisibleRecent();
+    }
+
+    partial void OnTitleIdChanged(string value) => OnPropertyChanged(nameof(HasTitleId));
 
     partial void OnReduceEffectsChanged(bool value)
     {
@@ -390,13 +430,24 @@ public partial class MainViewModel : ObservableObject
         Persist();
     }
 
-    private void ApplyIdentity(ImageIdentity identity, string path)
+    private void ApplyIdentity(ImageIdentity identity, string path, TitleMetadata metadata, CachedTitle cached)
     {
-        var title = string.IsNullOrWhiteSpace(identity.VolumeLabel)
-            ? Path.GetFileNameWithoutExtension(path)
-            : identity.VolumeLabel;
-        VolumeTitle = title.Replace('_', ' ');
+        var found = TitleMetadataReader.ReadTitle(metadata);
+        if (found is not null)
+        {
+            VolumeTitle = found;
+        }
+        else
+        {
+            var fallback = string.IsNullOrWhiteSpace(identity.VolumeLabel)
+                ? Path.GetFileNameWithoutExtension(path)
+                : identity.VolumeLabel;
+            VolumeTitle = fallback.Replace('_', ' ');
+        }
         DetailTitle = VolumeTitle;
+        TitleId = metadata.TitleId ?? "";
+        IconPath = cached.IconPath;
+        BannerPath = cached.BannerPath;
         SourceName = identity.SourceName;
         ArtSeed = identity.FormatId + ":" + identity.SourceName + ":" + (identity.VolumeLabel ?? "");
         var chips = new List<string>();
@@ -452,7 +503,15 @@ public partial class MainViewModel : ObservableObject
         Index(_image.Root);
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
-            foreach (var match in NameSearch.Search(_image.Root, SearchText.Trim()))
+            var query = SearchText.Trim();
+            var matches = NameSearch.Search(_image.Root, query);
+            if (matches.Count == 0 && QueryMatchesOpenTitle(query))
+            {
+                Add(_image.Root, 0);
+                return;
+            }
+
+            foreach (var match in matches)
             {
                 Rows.Add(MakeRow(match, 0, false));
             }
@@ -518,15 +577,61 @@ public partial class MainViewModel : ObservableObject
             }
         }
 
-        Recent.Insert(0, new RecentItem(path, title, meta));
+        var icon = _cache.TryGet(path)?.IconPath;
+        Recent.Insert(0, new RecentItem(path, title, meta, TitleId, icon));
         while (Recent.Count > 8)
         {
             Recent.RemoveAt(Recent.Count - 1);
         }
 
         OpenCount = Recent.Count;
-        _settings.Recent = Recent.Select(item => new RecentRecord { Path = item.Path, Title = item.Title, Meta = item.Meta }).ToList();
+        _settings.Recent = Recent.Select(item => new RecentRecord
+        {
+            Path = item.Path,
+            Title = item.Title,
+            Meta = item.Meta,
+            TitleId = item.TitleId
+        }).ToList();
         Persist();
+        RebuildVisibleRecent();
+    }
+
+    private void RebuildVisibleRecent()
+    {
+        VisibleRecent.Clear();
+        var query = SearchText.Trim();
+        foreach (var item in Recent)
+        {
+            if (string.IsNullOrEmpty(query)
+                || item.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || item.TitleId.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || item.Meta.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || item.Path.Contains(query, StringComparison.OrdinalIgnoreCase))
+            {
+                VisibleRecent.Add(item);
+            }
+        }
+    }
+
+    private bool QueryMatchesOpenTitle(string query)
+    {
+        if (VolumeTitle.Contains(query, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return !string.IsNullOrEmpty(TitleId) && TitleId.Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ProductVersion()
+    {
+        var version = typeof(MainViewModel).Assembly.GetName().Version;
+        if (version is null)
+        {
+            return "0.2.0";
+        }
+
+        return string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{version.Major}.{version.Minor}.{Math.Max(version.Build, 0)}");
     }
 
     private async Task ClearImageAsync()
@@ -572,7 +677,7 @@ public partial class FileRow : ObservableObject
     public global::Avalonia.Thickness Indent => new(8 + Depth * 20, 0, 8, 0);
 }
 
-public sealed record RecentItem(string Path, string Title, string Meta)
+public sealed record RecentItem(string Path, string Title, string Meta, string TitleId = "", string? IconPath = null)
 {
     public string Seed => Path;
 }

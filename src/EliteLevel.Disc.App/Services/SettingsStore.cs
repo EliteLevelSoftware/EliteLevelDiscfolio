@@ -18,17 +18,32 @@ public sealed class RecentRecord
     public string Path { get; set; } = "";
     public string Title { get; set; } = "";
     public string Meta { get; set; } = "";
+    public string TitleId { get; set; } = "";
 }
 
 public static class SettingsStore
 {
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
+    private static string _directory = DefaultDirectory();
 
-    public static string FilePath { get; } = Path.Combine(
+    /// <summary>Discfolio data folder. Tests point this at a temporary directory.</summary>
+    public static string DirectoryPath => _directory;
+
+    public static string FilePath => Path.Combine(_directory, "settings.json");
+
+    public static string CacheDirectory => Path.Combine(_directory, "cache");
+
+    public static void UseDirectory(string directory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(directory);
+        Directory.CreateDirectory(directory);
+        _directory = directory;
+    }
+
+    public static string DefaultDirectory() => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "EliteLevel",
-        "Discfolio",
-        "settings.json");
+        "Discfolio");
 
     public static AppSettings Load()
     {

@@ -1,8 +1,11 @@
 using System.Text;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Media.Imaging;
 using DiscUtils.Iso9660;
+using EliteLevel.Disc.App.Services;
 using EliteLevel.Disc.App.ViewModels;
+using EliteLevel.Disc.Core.Tests;
 
 namespace EliteLevel.Disc.App.Tests;
 
@@ -33,6 +36,13 @@ public class WindowTests
             builder.AddFile(@"PS3_GAME\USRDIR\DATA.BIN", Encoding.ASCII.GetBytes("hello"));
             builder.Build(iso);
 
+            var accountSettings = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "EliteLevel",
+                "Discfolio",
+                "settings.json");
+            var before = File.Exists(accountSettings) ? await File.ReadAllBytesAsync(accountSettings) : null;
+
             var window = new MainWindow();
             window.Show();
             var model = Assert.IsType<MainViewModel>(window.DataContext);
@@ -45,6 +55,76 @@ public class WindowTests
             model.SelectRowCommand.Execute("/PS3_GAME");
             model.ToggleRowCommand.Execute("/PS3_GAME");
             Assert.Contains(model.Rows, row => row.Name == "ICON0.PNG");
+
+            Assert.Equal(IsolatedData.Root, SettingsStore.DirectoryPath);
+            Assert.StartsWith(Path.GetTempPath(), SettingsStore.FilePath, StringComparison.Ordinal);
+            Assert.Contains("NORTHWIND", await File.ReadAllTextAsync(SettingsStore.FilePath));
+            var after = File.Exists(accountSettings) ? await File.ReadAllBytesAsync(accountSettings) : null;
+            Assert.Equal(before, after);
+            Assert.Equal(new[] { "northwind.iso" }, Directory.GetFiles(directory).Select(Path.GetFileName).ToArray());
+
+            model.SearchText = "NORTHWIND";
+            Assert.Contains(model.Rows, row => row.Name == "PS3_GAME");
+            Assert.Contains(model.VisibleRecent, item => item.Title == "NORTHWIND");
+            model.SearchText = "not-in-this-image";
+            Assert.Empty(model.Rows);
+            Assert.Empty(model.VisibleRecent);
+            window.Close();
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(directory, true);
+            }
+            catch (IOException)
+            {
+            }
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Window_shows_sfo_title_art_and_title_id()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "discfolio-ui", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var iso = Path.Combine(directory, "traders.iso");
+        try
+        {
+            var icon = SyntheticTitles.Png(12, 34, 56);
+            var banner = SyntheticTitles.Png(90, 10, 20);
+            var builder = new CDBuilder { UseJoliet = true, VolumeIdentifier = "POTCAWE" };
+            builder.AddFile(@"PS3_GAME\PARAM.SFO", SyntheticTitles.Sfo("Northwind Traders", "BLUS00001", "01.02", "DG", 5));
+            builder.AddFile(@"PS3_GAME\ICON0.PNG", icon);
+            builder.AddFile(@"PS3_GAME\PIC1.PNG", banner);
+            builder.Build(iso);
+
+            var window = new MainWindow();
+            window.Show();
+            var model = Assert.IsType<MainViewModel>(window.DataContext);
+            await model.OpenAsync(iso);
+            Assert.Equal("Northwind Traders", model.VolumeTitle);
+            Assert.Equal("Northwind Traders", model.DetailTitle);
+            Assert.Equal("BLUS00001", model.TitleId);
+            Assert.True(model.HasTitleId);
+            Assert.NotNull(model.IconPath);
+            Assert.NotNull(model.BannerPath);
+            Assert.StartsWith(Path.GetFullPath(SettingsStore.CacheDirectory), Path.GetFullPath(model.IconPath));
+            Assert.Equal(icon, await File.ReadAllBytesAsync(model.IconPath));
+            Assert.Equal(banner, await File.ReadAllBytesAsync(model.BannerPath));
+            using (var decoded = new Bitmap(model.IconPath))
+            {
+                Assert.Equal(new global::Avalonia.PixelSize(1, 1), decoded.PixelSize);
+            }
+
+            var bannerArt = EliteLevel.Avalonia.Controls.TitleArt.LoadBanner(model.BannerPath, model.IconPath, 64, 40);
+            var softened = EliteLevel.Avalonia.Controls.TitleArt.LoadBanner(null, model.IconPath, 64, 40);
+            Assert.Equal(new global::Avalonia.PixelSize(1, 1), bannerArt!.PixelSize);
+            Assert.Equal(new global::Avalonia.PixelSize(64, 40), softened!.PixelSize);
+
+            model.SearchText = "BLUS00001";
+            Assert.Contains(model.Rows, row => row.Name == "PS3_GAME");
+            Assert.Contains(model.VisibleRecent, item => item.TitleId == "BLUS00001");
             window.Close();
         }
         finally
