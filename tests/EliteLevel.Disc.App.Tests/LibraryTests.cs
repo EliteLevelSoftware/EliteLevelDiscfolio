@@ -10,6 +10,7 @@ using Avalonia.VisualTree;
 using DiscUtils.Iso9660;
 using EliteLevel.Disc.App.Services;
 using EliteLevel.Disc.App.ViewModels;
+using EliteLevel.Disc.Core.Drives;
 using EliteLevel.Disc.Core.Tests;
 using Velopack.Sources;
 
@@ -120,6 +121,46 @@ public class LibraryTests
         Assert.False(File.Exists(removed.IconPath));
         Assert.Contains("Keep", await File.ReadAllTextAsync(SettingsStore.FilePath));
         Assert.DoesNotContain("Gone", await File.ReadAllTextAsync(SettingsStore.FilePath));
+    }
+
+    [Fact]
+    public async Task Clear_missing_keeps_a_drive_until_the_disc_is_gone()
+    {
+        using var scope = new SettingsScope();
+        var source = new MemoryDriveSource();
+        source.Add(new OpticalDrive("D:", @"\\.\D:", "GAME", 4096, true, false), new MemoryBlockDevice(new byte[4096]));
+        using (OpticalDrives.Override(source))
+        {
+            SettingsStore.Save(new AppSettings
+            {
+                Recent =
+                [
+                    new RecentRecord { Path = "D:", Title = "Game", Meta = "Disc drive", IsDrive = true, CacheKey = new string('a', 64) }
+                ]
+            });
+            var cache = new EliteLevel.Disc.Core.Titles.TitleArtCache(SettingsStore.CacheDirectory);
+            var stored = cache.StoreKey(new string('a', 64), new EliteLevel.Disc.Core.Titles.TitleMetadata
+            {
+                Title = "Game",
+                Icon = SyntheticTitles.Png(1, 2, 3)
+            });
+
+            var model = new MainViewModel();
+            Assert.Single(model.Recent);
+            Assert.True(model.Recent[0].IsDrive);
+            Assert.Equal("Game", model.Recent[0].Title);
+
+            await model.ClearMissingCommand.ExecuteAsync(null);
+            Assert.Equal("No missing images.", model.LibraryMessage);
+            Assert.Single(model.Recent);
+            Assert.True(File.Exists(stored.IconPath));
+
+            source.SetMediaPresent("D:", false);
+            await model.ClearMissingCommand.ExecuteAsync(null);
+            Assert.Equal("Removed 1 missing image.", model.LibraryMessage);
+            Assert.Empty(model.Recent);
+            Assert.False(File.Exists(stored.IconPath));
+        }
     }
 
     [AvaloniaFact]

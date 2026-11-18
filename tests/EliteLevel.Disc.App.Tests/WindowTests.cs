@@ -2,9 +2,11 @@ using System.Text;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media.Imaging;
+using Avalonia.VisualTree;
 using DiscUtils.Iso9660;
 using EliteLevel.Disc.App.Services;
 using EliteLevel.Disc.App.ViewModels;
+using EliteLevel.Disc.Core.Drives;
 using EliteLevel.Disc.Core.Tests;
 
 namespace EliteLevel.Disc.App.Tests;
@@ -126,6 +128,63 @@ public class WindowTests
             Assert.Contains(model.Rows, row => row.Name == "PS3_GAME");
             Assert.Contains(model.VisibleRecent, item => item.TitleId == "BLUS00001");
             window.Close();
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(directory, true);
+            }
+            catch (IOException)
+            {
+            }
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Window_opens_a_drive_and_rips_it()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "discfolio-ui", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var iso = Path.Combine(directory, "drive.iso");
+        try
+        {
+            var builder = new CDBuilder { UseJoliet = true, VolumeIdentifier = "NORTHWIND" };
+            builder.AddFile("readme.txt", Encoding.ASCII.GetBytes("hello"));
+            builder.Build(iso);
+            var bytes = await File.ReadAllBytesAsync(iso);
+            var source = new MemoryDriveSource();
+            source.Add(new OpticalDrive("D:", @"\\.\D:", "NORTHWIND", bytes.LongLength, true, false), new MemoryBlockDevice(bytes) { Id = "D:" });
+            using (OpticalDrives.Override(source))
+            {
+                var window = new MainWindow();
+                window.Show();
+                var labels = window.GetVisualDescendants().OfType<Button>().Select(button => button.Content as string).ToList();
+                Assert.Contains("Open disc drive", labels);
+                var model = Assert.IsType<MainViewModel>(window.DataContext);
+                await model.OpenAsync("D:");
+                Assert.True(model.HasImage);
+                Assert.True(model.IsDriveSource);
+                Assert.Equal("NORTHWIND", model.VolumeTitle);
+                Assert.Contains(model.Recent, item => item.IsDrive);
+                Assert.Contains("Disc drive", model.Recent[0].Meta);
+
+                model.RipOutput = Path.Combine(directory, "ripped.iso");
+                model.RipRetriesText = "4";
+                await model.StartRipCommand.ExecuteAsync(null);
+                Assert.True(model.RipFinished);
+                Assert.Contains("No bad sectors", model.RipStatus);
+                Assert.Equal(64, model.RipSha256.Length);
+                Assert.Equal(bytes, await File.ReadAllBytesAsync(model.RipOutput));
+                Assert.True(File.Exists(model.RipOutput + ".sha256"));
+                Assert.True(File.Exists(model.RipOutput + ".sha1"));
+                Assert.True(File.Exists(model.RipOutput + ".md5"));
+
+                await model.AddRipToLibraryCommand.ExecuteAsync(null);
+                Assert.Contains(model.Recent, item => item.Path == model.RippedIsoPath && !item.IsDrive);
+                Assert.Equal(bytes, await File.ReadAllBytesAsync(iso));
+                window.Close();
+            }
         }
         finally
         {

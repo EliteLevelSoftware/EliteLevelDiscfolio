@@ -62,14 +62,7 @@ public sealed class TitleArtCache
 
     public CachedTitle Store(string imagePath, TitleMetadata metadata)
     {
-        var memory = new CachedTitle
-        {
-            Title = metadata.Title,
-            TitleId = metadata.TitleId,
-            Version = metadata.Version,
-            Category = metadata.Category,
-            ParentalLevel = metadata.ParentalLevel
-        };
+        var memory = MemoryCopy(metadata);
         try
         {
             var key = Fingerprint(imagePath);
@@ -82,16 +75,7 @@ public sealed class TitleArtCache
             Directory.CreateDirectory(dir);
             string? icon = WriteArt(dir, "icon", metadata.Icon);
             string? banner = WriteArt(dir, "banner", metadata.Banner);
-            var meta = new CacheMeta
-            {
-                Title = metadata.Title,
-                TitleId = metadata.TitleId,
-                Version = metadata.Version,
-                Category = metadata.Category,
-                ParentalLevel = metadata.ParentalLevel,
-                Icon = icon,
-                Banner = banner
-            };
+            var meta = MetaFrom(metadata, icon, banner);
             WriteAtomic(Path.Combine(dir, "meta.json"), Encoding.UTF8.GetBytes(JsonSerializer.Serialize(meta, Json)));
             Remember(imagePath, key);
             return ToCached(dir, meta);
@@ -99,6 +83,87 @@ public sealed class TitleArtCache
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
             return memory;
+        }
+    }
+
+    /// <summary>
+    /// Art for a drive, keyed by volume label, size and a hash of the first sectors.
+    /// The key does not depend on a file path, so it still resolves after the disc is ejected.
+    /// </summary>
+    public CachedTitle? TryGetKey(string cacheKey)
+    {
+        if (!IsCacheKey(cacheKey))
+        {
+            return null;
+        }
+
+        try
+        {
+            var dir = Path.Combine(_directory, cacheKey);
+            var metaPath = Path.Combine(dir, "meta.json");
+            if (!File.Exists(metaPath))
+            {
+                return null;
+            }
+
+            var meta = JsonSerializer.Deserialize<CacheMeta>(File.ReadAllText(metaPath), Json);
+            return meta is null ? null : ToCached(dir, meta);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException or NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    public CachedTitle StoreKey(string cacheKey, TitleMetadata metadata)
+    {
+        var memory = MemoryCopy(metadata);
+        if (!IsCacheKey(cacheKey))
+        {
+            return memory;
+        }
+
+        try
+        {
+            var dir = Path.Combine(_directory, cacheKey);
+            Directory.CreateDirectory(dir);
+            string? icon = WriteArt(dir, "icon", metadata.Icon);
+            string? banner = WriteArt(dir, "banner", metadata.Banner);
+            var meta = MetaFrom(metadata, icon, banner);
+            WriteAtomic(Path.Combine(dir, "meta.json"), Encoding.UTF8.GetBytes(JsonSerializer.Serialize(meta, Json)));
+            return ToCached(dir, meta);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            return memory;
+        }
+    }
+
+    public void RemoveKey(string cacheKey)
+    {
+        if (!IsCacheKey(cacheKey))
+        {
+            return;
+        }
+
+        try
+        {
+            var index = ReadIndex();
+            foreach (var pair in index.Where(pair => string.Equals(pair.Value, cacheKey, StringComparison.Ordinal)).ToArray())
+            {
+                index.Remove(pair.Key);
+            }
+
+            var dir = Path.Combine(_directory, cacheKey);
+            if (Directory.Exists(dir))
+            {
+                Directory.Delete(dir, recursive: true);
+            }
+
+            WriteIndex(index);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or JsonException)
+        {
         }
     }
 
@@ -184,6 +249,26 @@ public sealed class TitleArtCache
 
     private static bool IsCacheKey(string? key) =>
         key is { Length: 64 } && key.All(static c => c is >= '0' and <= '9' or >= 'a' and <= 'f');
+
+    private static CachedTitle MemoryCopy(TitleMetadata metadata) => new()
+    {
+        Title = metadata.Title,
+        TitleId = metadata.TitleId,
+        Version = metadata.Version,
+        Category = metadata.Category,
+        ParentalLevel = metadata.ParentalLevel
+    };
+
+    private static CacheMeta MetaFrom(TitleMetadata metadata, string? icon, string? banner) => new()
+    {
+        Title = metadata.Title,
+        TitleId = metadata.TitleId,
+        Version = metadata.Version,
+        Category = metadata.Category,
+        ParentalLevel = metadata.ParentalLevel,
+        Icon = icon,
+        Banner = banner
+    };
 
     private static CachedTitle ToCached(string dir, CacheMeta meta) => new()
     {

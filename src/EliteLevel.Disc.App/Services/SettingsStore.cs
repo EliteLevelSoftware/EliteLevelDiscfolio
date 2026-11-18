@@ -31,6 +31,8 @@ public sealed class RecentRecord
     public string Title { get; set; } = "";
     public string Meta { get; set; } = "";
     public string TitleId { get; set; } = "";
+    public bool IsDrive { get; set; }
+    public string? CacheKey { get; set; }
 }
 
 public static class SettingsStore

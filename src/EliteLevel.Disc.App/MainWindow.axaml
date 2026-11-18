@@ -41,7 +41,7 @@
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="Open an image" FontSize="13" FontWeight="SemiBold"/>
-                  <TextBlock Text="ISO, XISO, folder" FontSize="11.5" Foreground="{StaticResource ElTextMutedBrush}"/>
+                  <TextBlock Text="ISO, folder, disc" FontSize="11.5" Foreground="{StaticResource ElTextMutedBrush}"/>
                 </StackPanel>
                 <Button Grid.Column="1" Width="30" Height="30" Classes="el-icon" Click="OnOpenFile" ToolTip.Tip="Open an image"
                         Background="{StaticResource ElCharcoal750Brush}">
@@ -141,9 +141,12 @@
             <Panel IsVisible="{Binding ShowEmpty}">
               <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12" MaxWidth="420">
                 <TextBlock Text="No image open" FontSize="17" FontWeight="Bold" HorizontalAlignment="Center"/>
-                <TextBlock Text="Open a disc image or drop one here." Foreground="{StaticResource ElText2Brush}"
+                <TextBlock Text="Open a disc image, a folder, or a disc in a drive." Foreground="{StaticResource ElText2Brush}"
                            TextAlignment="Center" TextWrapping="Wrap"/>
-                <Button Classes="el-primary" Content="Open image" HorizontalAlignment="Center" Click="OnOpenFile"/>
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                  <Button Classes="el-primary" Content="Open image" Click="OnOpenFile"/>
+                  <Button Classes="el-secondary" Content="Open disc drive" Click="OnOpenDrive"/>
+                </StackPanel>
               </StackPanel>
             </Panel>
 
@@ -164,24 +167,38 @@
                   <TextBlock Text="Copy detail keeps the technical message off this sentence." Foreground="{StaticResource ElText2Brush}" TextWrapping="Wrap"/>
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <Button Classes="el-primary" Content="Open image" Click="OnOpenFile"/>
+                    <Button Classes="el-secondary" Content="Open disc drive" Click="OnOpenDrive"/>
                     <Button Classes="el-secondary" Content="Copy detail" Click="OnCopyDetail"/>
                   </StackPanel>
                 </StackPanel>
               </Border>
             </Panel>
 
-            <Grid IsVisible="{Binding ShowBrowser}" RowDefinitions="420,*">
-              <Grid ColumnDefinitions="*,322">
+            <Grid IsVisible="{Binding ShowBrowser}" RowDefinitions="Auto,420,*">
+              <Border Grid.Row="0" IsVisible="{Binding HasDriveNotice}" Margin="0,0,0,12"
+                      Background="{StaticResource ElCharcoal850Brush}" CornerRadius="18" Padding="16,12"
+                      BorderBrush="{StaticResource ElBorderCardBrush}" BorderThickness="1">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="{Binding DriveNotice}" TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"/>
+                  <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding ShowDiscKey}">
+                    <Button Classes="el-secondary" Content="Load disc key" Click="OnLoadDiscKey"/>
+                    <TextBlock Text="{Binding DiscKeyStatus}" VerticalAlignment="Center" Foreground="{StaticResource ElText2Brush}" TextWrapping="Wrap"/>
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+              <Grid Grid.Row="1" ColumnDefinitions="*,322">
                 <controls:HeroCard Margin="0,0,20,0"
                                    Seed="{Binding ArtSeed}" Icon="{Binding IconPath}" Banner="{Binding BannerPath}"
                                    Title="{Binding VolumeTitle}" Eyebrow="{Binding Eyebrow}"
                                    Chips="{Binding ChipLine}" Meta="{Binding MetaLine}"/>
                 <controls:FeatureCard Grid.Column="1">
                   <DockPanel>
-                    <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,Auto,*" Margin="0,16,0,0">
+                    <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,Auto,Auto,*" Margin="0,16,0,0">
                       <Button Classes="el-primary" Content="Extract all" Command="{Binding BeginExtractAllCommand}"/>
                       <Button Grid.Column="1" Classes="el-ghost" Content="Verify" Margin="8,0,0,0" Command="{Binding VerifyCommand}"/>
-                      <TextBlock Grid.Column="2" Text="{Binding PlatformTag}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                      <Button Grid.Column="2" Classes="el-secondary" Content="Rip to ISO" Margin="8,0,0,0"
+                              Command="{Binding BeginRipCommand}" IsVisible="{Binding IsDriveSource}"/>
+                      <TextBlock Grid.Column="3" Text="{Binding PlatformTag}" HorizontalAlignment="Right" VerticalAlignment="Center"
                                  FontWeight="Bold" FontSize="12" Foreground="#FFF7EE"/>
                     </Grid>
                     <StackPanel>
@@ -208,7 +225,7 @@
                   </DockPanel>
                 </controls:FeatureCard>
               </Grid>
-              <Grid Grid.Row="1" Margin="0,22,0,0" ColumnDefinitions="*,372">
+              <Grid Grid.Row="2" Margin="0,22,0,0" ColumnDefinitions="*,372">
                 <DockPanel Margin="0,0,20,0">
                   <Grid DockPanel.Dock="Top" Margin="0,0,0,12" ColumnDefinitions="*,Auto">
                     <TextBlock Text="Recent images" FontSize="17" FontWeight="Bold"/>
@@ -237,7 +254,13 @@
                               <MenuItem Header="Remove from library" Click="OnRemoveFromLibrary"/>
                             </ContextMenu>
                           </Button.ContextMenu>
-                          <controls:MediaTile Seed="{Binding Seed}" Icon="{Binding IconPath}" Title="{Binding Title}" Meta="{Binding Meta}"/>
+                          <Grid>
+                            <controls:MediaTile Seed="{Binding Seed}" Icon="{Binding IconPath}" Title="{Binding Title}" Meta="{Binding Meta}"/>
+                            <Border IsVisible="{Binding IsDrive}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10"
+                                    Padding="7,2" CornerRadius="8" Background="{StaticResource ElGoldBrush}" IsHitTestVisible="False">
+                              <TextBlock Text="Drive" FontSize="10" FontWeight="Bold" Foreground="#1C1819"/>
+                            </Border>
+                          </Grid>
                         </Button>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
@@ -279,10 +302,11 @@
             <ScrollViewer IsVisible="{Binding IsOpenImages}">
               <StackPanel Spacing="16" MaxWidth="720">
                 <TextBlock Text="Open images" FontSize="22" FontWeight="Bold"/>
-                <TextBlock Text="One image is open at a time. Recent images stay on this machine." Foreground="{StaticResource ElText2Brush}" TextWrapping="Wrap"/>
+                <TextBlock Text="One image is open at a time. Recent images stay on this machine. A drive with no disc counts as missing and is removed only when you click Clear missing." Foreground="{StaticResource ElText2Brush}" TextWrapping="Wrap"/>
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <Button Classes="el-primary" Content="Open image" Click="OnOpenFile"/>
                   <Button Classes="el-secondary" Content="Open folder" Click="OnOpenFolder"/>
+                  <Button Classes="el-secondary" Content="Open disc drive" Click="OnOpenDrive"/>
                   <Button Classes="el-secondary" Content="Clear missing" Command="{Binding ClearMissingCommand}"/>
                 </StackPanel>
                 <TextBlock Text="{Binding LibraryMessage}" Foreground="{StaticResource ElTextMutedBrush}" TextWrapping="Wrap"/>
@@ -295,9 +319,12 @@
                             <MenuItem Header="Remove from library" Click="OnRemoveFromLibrary"/>
                           </ContextMenu>
                         </Button.ContextMenu>
-                        <Grid ColumnDefinitions="*,Auto">
-                          <TextBlock Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}"/>
-                          <TextBlock Grid.Column="1" Text="{Binding Meta}" Foreground="{StaticResource ElTextMutedBrush}" Margin="16,0,0,0"/>
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                          <Border IsVisible="{Binding IsDrive}" Background="{StaticResource ElGoldBrush}" CornerRadius="8" Padding="7,2" Margin="0,0,10,0" VerticalAlignment="Center">
+                            <TextBlock Text="Drive" FontSize="10" FontWeight="Bold" Foreground="#1C1819"/>
+                          </Border>
+                          <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}"/>
+                          <TextBlock Grid.Column="2" Text="{Binding Meta}" Foreground="{StaticResource ElTextMutedBrush}" Margin="16,0,0,0"/>
                         </Grid>
                       </Button>
                     </DataTemplate>
@@ -388,9 +415,11 @@
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
                            Text="Discfolio browses disc images and folder dumps you already have. It is read-only: the source is never modified. It does not include encryption keys or game data. Use it only with copies you are allowed to possess."/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
-                           Text="Open an ISO 9660 or Joliet image, an Xbox or Xbox 360 XDVDFS image, or a folder. Nintendo Switch images are not supported yet. Search by name, copy a SHA-256 hash, and extract files to a folder you choose. Protected paths, including a hidden system-update folder, are skipped unless you include them, and even then they are copied unchanged."/>
+                           Text="Open an ISO 9660 or Joliet image, an Xbox or Xbox 360 XDVDFS image, a folder, or a disc in an optical drive. Nintendo Switch images are not supported yet. Search by name, copy a SHA-256 hash, and extract files to a folder you choose. Protected paths, including a hidden system-update folder, are skipped unless you include them, and even then they are copied unchanged."/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
-                           Text="Right-click a library tile to remove it. That deletes the entry and its cached art only. The image file stays where it is. Clear missing drops entries whose files are gone."/>
+                           Text="Rip to ISO copies the disc a sector at a time and writes SHA-256, SHA-1 and MD5 next to the file. A sector that still fails is stored as zeros and listed. The drive is never written. Audio CD tracks are not supported. PlayStation 3 game data on a disc is encrypted. Xbox game partitions need a drive with flashed firmware; the video partition can still be read."/>
+                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
+                           Text="Right-click a library tile to remove it. That deletes the entry and its cached art only. The image file stays where it is. Clear missing drops entries whose files are gone. A drive entry is missing when that drive has no disc, and it stays until you click Clear missing."/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
                            Text="Settings can check the public GitHub releases for an update. An available update downloads in the background and is installed only after you choose OK."/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElTextMutedBrush}"
@@ -462,6 +491,73 @@
               <Button Classes="el-secondary" Content="Cancel" Command="{Binding CancelExtractCommand}"/>
             </StackPanel>
           </StackPanel>
+        </Border>
+      </Panel>
+
+      <Panel IsVisible="{Binding ShowDrivePicker}" ZIndex="20" Background="{StaticResource ElScrimBrush}">
+        <Border Background="{StaticResource ElCharcoal850Brush}" CornerRadius="24" Padding="28" Width="640" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <StackPanel Spacing="12">
+            <TextBlock Text="Open disc drive" FontSize="22" FontWeight="Bold"/>
+            <TextBlock Text="Drives with a disc are listed. Discfolio only reads the drive." Foreground="{StaticResource ElText2Brush}" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding DrivePickerMessage}" Foreground="{StaticResource ElTextMutedBrush}" TextWrapping="Wrap"/>
+            <ItemsControl ItemsSource="{Binding Drives}" MaxHeight="280">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:DriveRow">
+                  <Button Classes="el-row" Classes.selected="{Binding IsSelected}" HorizontalAlignment="Stretch" Margin="0,4"
+                          Click="OnPickDrive" Tag="{Binding Id}">
+                    <Grid ColumnDefinitions="140,*,120,160">
+                      <TextBlock Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
+                      <TextBlock Grid.Column="1" Text="{Binding VolumeLabel}" VerticalAlignment="Center" Margin="12,0,0,0" TextTrimming="CharacterEllipsis"/>
+                      <TextBlock Grid.Column="2" Text="{Binding SizeText}" VerticalAlignment="Center" HorizontalAlignment="Right" Foreground="{StaticResource ElTextMutedBrush}"/>
+                      <TextBlock Grid.Column="3" Text="{Binding Platform}" VerticalAlignment="Center" Margin="12,0,0,0" TextTrimming="CharacterEllipsis"/>
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+              <Button Classes="el-primary" Content="Open" Command="{Binding OpenSelectedDriveCommand}"/>
+              <Button Classes="el-secondary" Content="Refresh" Command="{Binding RefreshDrivesCommand}"/>
+              <Button Classes="el-secondary" Content="Cancel" Command="{Binding CloseDrivePickerCommand}"/>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Panel>
+
+      <Panel IsVisible="{Binding ShowRipDialog}" ZIndex="21" Background="{StaticResource ElScrimBrush}">
+        <Border Background="{StaticResource ElCharcoal850Brush}" CornerRadius="24" Padding="28" Width="560" MaxHeight="640" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <ScrollViewer>
+            <StackPanel Spacing="12">
+              <TextBlock Text="Rip to ISO" FontSize="22" FontWeight="Bold"/>
+              <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
+                         Text="Sectors are copied into a new ISO. A bad sector is retried, then stored as zeros and listed. SHA-256, SHA-1 and MD5 are written next to the ISO. The drive is never written."/>
+              <TextBlock Text="ISO file" Foreground="{StaticResource ElTextMutedBrush}"/>
+              <Grid ColumnDefinitions="*,Auto">
+                <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44">
+                  <TextBox Classes="plain" Text="{Binding RipOutput}"/>
+                </Border>
+                <Button Grid.Column="1" Classes="el-secondary" Content="Browse" Margin="8,0,0,0" Click="OnBrowseRip"/>
+              </Grid>
+              <TextBlock Text="Read attempts per sector" Foreground="{StaticResource ElTextMutedBrush}"/>
+              <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44">
+                <TextBox Classes="plain" Text="{Binding RipRetriesText}"/>
+              </Border>
+              <TextBlock Text="{Binding RipStatus}" TextWrapping="Wrap"/>
+              <TextBlock Text="SHA-256" Foreground="{StaticResource ElTextMutedBrush}" IsVisible="{Binding RipFinished}"/>
+              <TextBlock Classes="mono" Text="{Binding RipSha256}" TextWrapping="Wrap" IsVisible="{Binding RipFinished}"/>
+              <TextBlock Text="SHA-1" Foreground="{StaticResource ElTextMutedBrush}" IsVisible="{Binding RipFinished}"/>
+              <TextBlock Classes="mono" Text="{Binding RipSha1}" TextWrapping="Wrap" IsVisible="{Binding RipFinished}"/>
+              <TextBlock Text="MD5" Foreground="{StaticResource ElTextMutedBrush}" IsVisible="{Binding RipFinished}"/>
+              <TextBlock Classes="mono" Text="{Binding RipMd5}" TextWrapping="Wrap" IsVisible="{Binding RipFinished}"/>
+              <TextBlock Text="{Binding RipBadSectors}" TextWrapping="Wrap" IsVisible="{Binding RipFinished}"/>
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                <Button Classes="el-primary" Content="Start rip" Command="{Binding StartRipCommand}" IsVisible="{Binding !RipFinished}" IsEnabled="{Binding !IsRipping}"/>
+                <Button Classes="el-secondary" Content="Cancel" Command="{Binding CancelRipCommand}" IsVisible="{Binding IsRipping}"/>
+                <Button Classes="el-primary" Content="Add to library" Command="{Binding AddRipToLibraryCommand}" IsVisible="{Binding RipFinished}"/>
+                <Button Classes="el-secondary" Content="Close" Command="{Binding CloseRipCommand}" IsVisible="{Binding !IsRipping}"/>
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
         </Border>
       </Panel>
     </Grid>

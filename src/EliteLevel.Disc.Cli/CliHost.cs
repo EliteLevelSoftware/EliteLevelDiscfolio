@@ -2,6 +2,7 @@ using System.CommandLine;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using EliteLevel.Disc.Core;
+using EliteLevel.Disc.Core.Drives;
 using EliteLevel.Disc.Core.Extract;
 using EliteLevel.Disc.Core.Hash;
 using EliteLevel.Disc.Core.IO;
@@ -14,6 +15,7 @@ public static class CliHost
 {
     private static readonly SemaphoreSlim Gate = new(1, 1);
     private static readonly AsyncLocal<bool> JsonOutput = new();
+    private static readonly AsyncLocal<DiscKey?> LoadedKey = new();
     private static readonly JsonSerializerOptions Json = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -52,7 +54,7 @@ public static class CliHost
 
     private static RootCommand Build()
     {
-        var image = new Argument<string>("image") { Description = "Disc image or folder dump" };
+        var image = new Argument<string>("image") { Description = "Disc image, folder dump, or optical drive (D: or /dev/sr0)" };
         var json = new Option<bool>("--json") { Description = "Print JSON" };
         var path = new Option<string>("--path") { Description = "Directory or file inside the image" };
         var showSystem = new Option<bool>("--show-system") { Description = "Show system-update folders" };
@@ -65,12 +67,16 @@ public static class CliHost
         var algo = new Option<string>("--algo") { Description = "Comma-separated hashes: sha256, sha1, md5", DefaultValueFactory = _ => "sha256" };
         var manifest = new Option<string>("--manifest") { Description = "Write a hash manifest to this file" };
         var searchPattern = new Argument<string>("pattern") { Description = "Name or glob to find" };
+        var discKey = new Option<string>("--disc-key") { Description = "A .ird file or a 16-byte disc key. The key is not printed." };
 
         var info = new Command("info", "Describe an image");
         info.Arguments.Add(image);
         info.Options.Add(json);
         info.Options.Add(showSystem);
-        info.SetAction((result, token) => InfoAsync(result.GetValue(image)!, result.GetValue(json), result.GetValue(showSystem), token));
+        info.Options.Add(discKey);
+        info.SetAction((result, token) => WithDiscKeyAsync(
+            result.GetValue(discKey),
+            () => InfoAsync(result.GetValue(image)!, result.GetValue(json), result.GetValue(showSystem), token)));
 
         var list = new Command("list", "List one directory");
         list.Arguments.Add(image);
@@ -78,6 +84,7 @@ public static class CliHost
         list.Options.Add(json);
         list.Options.Add(longer);
         list.Options.Add(showSystem);
+        list.Aliases.Add("ls");
         list.SetAction((result, token) => ListAsync(
             result.GetValue(image)!,
             result.GetValue(path),
@@ -102,7 +109,9 @@ public static class CliHost
         extract.Options.Add(includeProtected);
         extract.Options.Add(showSystem);
         extract.Options.Add(json);
-        extract.SetAction((result, token) => ExtractAsync(
+        extract.SetAction((result, token) => WithDiscKeyAsync(
+            result.GetValue(discKey),
+            () => ExtractAsync(
             result.GetValue(image)!,
             result.GetValue(output),
             result.GetValue(path),
@@ -112,7 +121,7 @@ public static class CliHost
             result.GetValue(includeProtected),
             result.GetValue(showSystem),
             result.GetValue(json),
-            token));
+            token)));
 
         var hash = new Command("hash", "Compute SHA-256, SHA-1 or MD5");
         hash.Arguments.Add(image);
@@ -147,14 +156,41 @@ public static class CliHost
         detect.Options.Add(json);
         detect.SetAction((result, token) => DetectAsync(result.GetValue(image)!, result.GetValue(json), token));
 
+        extract.Options.Add(discKey);
         var artOut = new Option<string>("--out") { Description = "Folder to write the icon and banner into" };
         var art = new Command("art", "Export the title icon and banner");
         art.Arguments.Add(image);
         art.Options.Add(artOut);
         art.Options.Add(json);
-        art.SetAction((result, token) => ArtAsync(result.GetValue(image)!, result.GetValue(artOut), result.GetValue(json), token));
+        art.Options.Add(discKey);
+        art.SetAction((result, token) => WithDiscKeyAsync(
+            result.GetValue(discKey),
+            () => ArtAsync(result.GetValue(image)!, result.GetValue(artOut), result.GetValue(json), token)));
 
-        var root = new RootCommand("EliteLevel Discfolio. Read-only explorer for disc images and folder dumps.");
+        var drives = new Command("drives", "List optical drives that have a disc");
+        drives.Options.Add(json);
+        drives.SetAction((result, token) => DrivesAsync(result.GetValue(json), token));
+
+        var drive = new Argument<string>("drive") { Description = "Optical drive, such as D: or /dev/sr0" };
+        var ripOut = new Option<string>("--out") { Description = "ISO file to write" };
+        var retries = new Option<int>("--retries")
+        {
+            Description = "Read attempts per sector before it is reported as bad",
+            DefaultValueFactory = _ => IsoRipper.DefaultAttempts
+        };
+        var rip = new Command("rip", "Copy a disc to an ISO and write SHA-256, SHA-1 and MD5");
+        rip.Arguments.Add(drive);
+        rip.Options.Add(ripOut);
+        rip.Options.Add(retries);
+        rip.Options.Add(json);
+        rip.SetAction((result, token) => RipAsync(
+            result.GetValue(drive)!,
+            result.GetValue(ripOut),
+            result.GetValue(retries),
+            result.GetValue(json),
+            token));
+
+        var root = new RootCommand("EliteLevel Discfolio. Read-only explorer for disc images, folder dumps, and optical drives.");
         root.Subcommands.Add(info);
         root.Subcommands.Add(list);
         root.Subcommands.Add(tree);
@@ -163,6 +199,8 @@ public static class CliHost
         root.Subcommands.Add(search);
         root.Subcommands.Add(detect);
         root.Subcommands.Add(art);
+        root.Subcommands.Add(drives);
+        root.Subcommands.Add(rip);
         return root;
     }
 
@@ -195,7 +233,10 @@ public static class CliHost
                     bytes = id.TotalBytes,
                     source = id.SourceName,
                     icon = meta.IconName,
-                    banner = meta.BannerName
+                    banner = meta.BannerName,
+                    fromDrive = id.FromDrive ? (bool?)true : null,
+                    notice = id.Notice,
+                    discKeyLoaded = LoadedKey.Value is null ? null : (bool?)true
                 });
             }
             else
@@ -234,6 +275,20 @@ public static class CliHost
                 Line("Directories", TextFormat.Count(id.DirectoryCount));
                 Line("Size", ByteSize.Format(id.TotalBytes));
                 Line("Source", id.SourceName);
+                if (id.FromDrive)
+                {
+                    Line("Drive", "Optical drive");
+                }
+
+                if (LoadedKey.Value is not null)
+                {
+                    Line("Disc key", "loaded");
+                }
+
+                if (!string.IsNullOrWhiteSpace(id.Notice))
+                {
+                    Console.WriteLine(id.Notice);
+                }
             }
 
             return 0;
@@ -540,6 +595,182 @@ public static class CliHost
             return 0;
         }, cancellationToken);
     }
+
+    private static async Task<int> WithDiscKeyAsync(string? path, Func<Task<int>> action)
+    {
+        LoadedKey.Value = null;
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            if (!DiscKeyFile.TryLoad(path, out var key, out var error))
+            {
+                return WriteError(1, "user", error ?? "That file is not a .ird or a 16-byte disc key.");
+            }
+
+            LoadedKey.Value = key;
+        }
+
+        try
+        {
+            return await action().ConfigureAwait(false);
+        }
+        finally
+        {
+            LoadedKey.Value = null;
+        }
+    }
+
+    private static async Task<int> DrivesAsync(bool json, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var listed = OpticalDrives.List();
+            var rows = new List<DriveJson>();
+            foreach (var drive in listed)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var described = await OpticalDrives.DescribeAsync(drive, cancellationToken).ConfigureAwait(false);
+                rows.Add(new DriveJson(
+                    described.Id,
+                    described.DevicePath,
+                    described.VolumeLabel,
+                    described.MediaBytes,
+                    described.Platform,
+                    described.FormatName,
+                    described.Notice,
+                    described.Error));
+            }
+
+            if (json)
+            {
+                WriteJson(new { drives = rows });
+            }
+            else if (rows.Count == 0)
+            {
+                Console.WriteLine("No optical drive with a disc was found.");
+            }
+            else
+            {
+                foreach (var row in rows)
+                {
+                    var detail = row.Error ?? row.Platform ?? row.Format ?? "";
+                    Console.WriteLine($"{row.Id}\t{row.VolumeLabel}\t{ByteSize.Format(row.Bytes)}\t{detail}");
+                    if (!string.IsNullOrWhiteSpace(row.Notice) && row.Error is null)
+                    {
+                        Console.WriteLine(row.Notice);
+                    }
+                }
+            }
+
+            return 0;
+        }
+        catch (OperationCanceledException)
+        {
+            return WriteError(1, "user", "Cancelled.");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            return WriteError(1, "user", ex.Message);
+        }
+    }
+
+    private static async Task<int> RipAsync(string drive, string? output, int attempts, bool json, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(output))
+        {
+            return WriteError(1, "user", "Rip needs --out.");
+        }
+
+        if (attempts < 1)
+        {
+            return WriteError(1, "user", "Retries must be at least 1.");
+        }
+
+        if (!OpticalDrives.IsDrivePath(drive))
+        {
+            return WriteError(1, "user", "Rip reads an optical drive such as D: or /dev/sr0.");
+        }
+
+        IBlockDevice device;
+        try
+        {
+            device = OpticalDrives.Open(drive);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return WriteError(1, "user", ex.Message);
+        }
+
+        var lastPercent = -1;
+        var progress = new Progress<RipProgress>(update =>
+        {
+            if (json)
+            {
+                return;
+            }
+
+            var percent = update.TotalSectors == 0 ? 100 : (int)(update.CompletedSectors * 100 / update.TotalSectors);
+            if (percent == lastPercent)
+            {
+                return;
+            }
+
+            lastPercent = percent;
+            Console.Error.WriteLine($"Ripping {percent}% ({update.CompletedSectors}/{update.TotalSectors}, bad {update.BadSectors})");
+        });
+
+        try
+        {
+            var result = await IsoRipper.RipAsync(device, output, new RipOptions { Attempts = attempts }, progress, cancellationToken).ConfigureAwait(false);
+            if (json)
+            {
+                WriteJson(new
+                {
+                    output = result.OutputPath,
+                    bytes = result.BytesWritten,
+                    sectors = result.SectorCount,
+                    badSectors = result.BadSectors,
+                    sha256 = result.Sha256,
+                    sha1 = result.Sha1,
+                    md5 = result.Md5
+                });
+            }
+            else
+            {
+                Console.WriteLine("Wrote " + result.OutputPath);
+                Console.WriteLine("Sectors " + result.SectorCount.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                Console.WriteLine(result.BadSectors.Count == 0
+                    ? "Bad sectors none"
+                    : "Bad sectors " + string.Join(", ", result.BadSectors.Select(sector => sector.ToString(System.Globalization.CultureInfo.InvariantCulture))));
+                Console.WriteLine("SHA-256 " + result.Sha256);
+                Console.WriteLine("SHA-1 " + result.Sha1);
+                Console.WriteLine("MD5 " + result.Md5);
+            }
+
+            return 0;
+        }
+        catch (OperationCanceledException)
+        {
+            return WriteError(1, "user", "Cancelled.");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            return WriteError(1, "user", ex.Message);
+        }
+        finally
+        {
+            device.Dispose();
+        }
+    }
+
+    private sealed record DriveJson(
+        string Id,
+        string DevicePath,
+        string? VolumeLabel,
+        long Bytes,
+        string? Platform,
+        string? Format,
+        string? Notice,
+        string? Error);
 
     private static async Task<int> WithImageAsync(string image, bool showSystem, Func<IDiscImage, CancellationToken, Task<int>> action, CancellationToken cancellationToken)
     {

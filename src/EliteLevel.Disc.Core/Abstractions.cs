@@ -66,7 +66,10 @@ public sealed record ImageIdentity(
     long TotalBytes,
     /// <summary>Files the default extract skips, including files under a hidden system-update folder.</summary>
     long ProtectedCount,
-    string SourceName);
+    string SourceName,
+    bool FromDrive = false,
+    string? Notice = null,
+    string? CacheKey = null);
 
 public readonly record struct ExtractProgress(int Completed, int Total, string CurrentPath, long BytesWritten);
 

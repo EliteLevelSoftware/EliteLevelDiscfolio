@@ -62,6 +62,58 @@ public partial class MainWindow : EliteLevel.Avalonia.Controls.EliteWindow
         }
     }
 
+    private void OnOpenDrive(object? sender, RoutedEventArgs e)
+    {
+        _ = Model?.OpenDrivePickerCommand.ExecuteAsync(null);
+    }
+
+    private void OnPickDrive(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string id } && Model is not null)
+        {
+            Model.SelectedDriveId = id;
+        }
+    }
+
+    private async void OnBrowseRip(object? sender, RoutedEventArgs e)
+    {
+        if (Model is null)
+        {
+            return;
+        }
+
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Rip to ISO",
+            DefaultExtension = "iso",
+            SuggestedFileName = string.IsNullOrWhiteSpace(Model.RipOutput) ? "disc.iso" : Path.GetFileName(Model.RipOutput)
+        });
+        var path = file?.TryGetLocalPath();
+        if (path is not null)
+        {
+            Model.RipOutput = path;
+        }
+    }
+
+    private async void OnLoadDiscKey(object? sender, RoutedEventArgs e)
+    {
+        if (Model is null)
+        {
+            return;
+        }
+
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Load disc key",
+            AllowMultiple = false
+        });
+        var path = files.Count > 0 ? files[0].TryGetLocalPath() : null;
+        if (path is not null)
+        {
+            Model.LoadDiscKey(path);
+        }
+    }
+
     private async void OnOpenFolder(object? sender, RoutedEventArgs e)
     {
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions

@@ -38,6 +38,18 @@ Art and the title are cached in the Discfolio data folder, keyed by a reader ver
 
 Right-click a library tile, or use the side card, to remove that entry. Removal deletes the library entry and its cached art and metadata. It does not delete the image file. Clear missing drops entries whose file is no longer there. A long title wraps to two lines, and the tooltip shows the full text.
 
+## Disc drive
+
+Open disc drive reads a disc in an optical drive. Windows uses the drive letter (`D:`), Linux uses `/dev/sr*` and `/dev/cdrom`, and macOS tries `/dev/rdiskN` when that disk is optical. The same readers used for image files detect the format. The drive is opened read-only and is never written. On Windows, raw access may need an administrator. On Linux, the account needs permission to read the device, usually the `cdrom` group. Discfolio says so instead of crashing.
+
+Rip to ISO copies the disc a sector at a time, with progress and cancel. A sector that still fails after the configured retries is written as zeros and listed. SHA-256, SHA-1 and MD5 are written beside the ISO so they can be compared with an archival list. After the rip, the ISO can be added to the library.
+
+Files and folders extract with the same flow as an image. Title art for a drive is cached by the volume label, the disc size and a hash of the first sectors.
+
+A drive entry is marked in the library. A drive with no disc counts as missing. Clear missing removes it. Discfolio does not remove it on its own.
+
+PlayStation 3 game data on a disc is encrypted. A normal drive can list the file system. Reading the game files needs a compatible drive and a disc key from a `.ird` file you supply. Discfolio can load a `.ird`, a 32-character hex key, or a 16-byte key, and does not decrypt the files. Xbox and Xbox 360 game partitions need a drive with flashed firmware. The video partition, and anything else the drive can see, can still be read. Audio CD tracks are not supported.
+
 ## Extract
 
 Copy the selection or the whole image to a folder you choose. Skip-existing treats a destination file of the same size as success, so extracting again into the same folder is safe. The source image is opened read-only and is never rewritten.
@@ -53,6 +65,11 @@ SHA-256 is one click, or `discfolio hash`. SHA-1 and MD5 are available because s
 `discfolio` is the same core library, without the user interface.
 
 ```text
+discfolio drives
+discfolio info D:
+discfolio list /dev/sr0 --long
+discfolio extract D: --out ./out --skip-existing
+discfolio rip D: --out game.iso
 discfolio info game.iso
 discfolio list game.iso --path /PS3_GAME/USRDIR --long
 discfolio extract game.iso --out ./out --pattern "*.png" --skip-existing
@@ -60,6 +77,8 @@ discfolio hash game.iso --manifest game.sha256
 discfolio search game.iso ICON0
 discfolio art game.iso --out ./art
 ```
+
+`drives` lists optical drives that have a disc. `--json` works on that command too. `info`, `list` (also `ls`), `extract` and `art` accept a drive in place of an image. `rip` writes the ISO and the three hash files next to it. `--retries` is how many times each sector is read before it is reported as bad. `--disc-key` loads a `.ird` or a key file and does not print the key.
 
 `--json` prints indented JSON on standard output, including failures. A failure looks like this, and the process exit code is unchanged:
 

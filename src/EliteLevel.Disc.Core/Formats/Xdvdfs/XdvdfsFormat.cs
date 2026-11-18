@@ -77,18 +77,45 @@ public sealed class XdvdfsFormat : IImageFormat
         foreach (var (layout, partitionBase) in Layouts)
         {
             var descriptor = partitionBase + DescriptorOffset;
-            if (IsDescriptor(stream, descriptor, partitionBase))
+            try
             {
-                var video = partitionBase > 0 && HasVideoMarker(stream, partitionBase);
+                if (!IsDescriptor(stream, descriptor, partitionBase))
+                {
+                    continue;
+                }
+
+                var video = false;
+                try
+                {
+                    video = partitionBase > 0 && HasVideoMarker(stream, partitionBase);
+                }
+                catch (IOException)
+                {
+                    video = false;
+                }
+
                 location = new XdvdfsLocation(partitionBase, descriptor, layout, video);
                 return true;
             }
+            catch (IOException)
+            {
+                if (stream.CanSeek)
+                {
+                    stream.Position = 0;
+                }
+            }
         }
 
-        if (IsDescriptor(stream, 0, 0))
+        try
         {
-            location = new XdvdfsLocation(0, 0, "plain", false);
-            return true;
+            if (IsDescriptor(stream, 0, 0))
+            {
+                location = new XdvdfsLocation(0, 0, "plain", false);
+                return true;
+            }
+        }
+        catch (IOException)
+        {
         }
 
         location = default;

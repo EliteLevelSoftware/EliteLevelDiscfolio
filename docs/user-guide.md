@@ -16,7 +16,11 @@ PlayStation 3 images and folder dumps are read from `PARAM.SFO` (`TITLE`, `TITLE
 
 The bytes are read in memory. Art and the title are then stored in the Discfolio data folder (the `EliteLevel/Discfolio` folder under the account's application data), keyed by a reader version, path, size and modification time. An entry from an older reader is computed again. Reopening the library uses that cache. Nothing is written next to the image, and the image is not modified.
 
-Right-click a library or recent tile and choose Remove from library, or use the same button on the side card. That removes the entry and deletes its cached art and metadata. The image file is not deleted or changed. Clear missing, on the library and on Open images, removes entries whose file or folder is no longer there. A long title wraps to two lines on the side card, the hero, and the tiles. Point at the title to see the full text.
+Right-click a library or recent tile and choose Remove from library, or use the same button on the side card. That removes the entry and deletes its cached art and metadata. The image file is not deleted or changed. Clear missing, on the library and on Open images, removes entries whose file or folder is no longer there. A drive entry is marked Drive. It counts as missing when that drive has no disc, and Clear missing is the only thing that removes it. A long title wraps to two lines on the side card, the hero, and the tiles. Point at the title to see the full text.
+
+Open disc drive lists drives that have a disc, with the letter or device, the volume label, the size and the detected platform. Rip to ISO, on the side card while a drive is open, copies sectors into a file you choose. Progress and cancel are on that dialog. When it finishes, the hashes and any bad sectors are shown, and Add to library opens the new ISO. A bad sector is retried, then stored as zeros.
+
+PlayStation 3 game data on a physical disc is encrypted. The file list is readable. Load disc key accepts a `.ird`, a 32-character hex key, or a 16-byte file you already have. The files are not decrypted. Xbox and Xbox 360 game partitions need flashed drive firmware. Discfolio still shows the video partition and the rest of what the drive can read. Audio CD tracks are not read. If Windows or Linux denies access to the device, the message says what permission is missing. The drive is never written.
 
 ## Updates
 
@@ -33,6 +37,10 @@ Extract asks for a destination. Skip files that already match is on by default: 
 ## Command line
 
 ```text
+dotnet run --project src/EliteLevel.Disc.Cli -- drives
+dotnet run --project src/EliteLevel.Disc.Cli -- info D:
+dotnet run --project src/EliteLevel.Disc.Cli -- ls /dev/sr0 --long
+dotnet run --project src/EliteLevel.Disc.Cli -- rip D: --out game.iso --retries 5
 dotnet run --project src/EliteLevel.Disc.Cli -- info game.iso
 dotnet run --project src/EliteLevel.Disc.Cli -- list game.iso --path /PS3_GAME --long
 dotnet run --project src/EliteLevel.Disc.Cli -- extract game.iso --out ./out --pattern "*.png" --skip-existing
@@ -40,6 +48,8 @@ dotnet run --project src/EliteLevel.Disc.Cli -- hash game.iso --manifest game.sh
 dotnet run --project src/EliteLevel.Disc.Cli -- search game.iso ICON0
 dotnet run --project src/EliteLevel.Disc.Cli -- art game.iso --out ./art
 ```
+
+`drives --json` prints the drives that have a disc. `info`, `list`, `ls`, `extract` and `art` take a drive such as `D:` or `/dev/sr0` in place of an image file. `rip` writes the ISO plus `.sha256`, `.sha1` and `.md5` beside it. Bad sector numbers go in `.badsectors` when any read still fails. `--disc-key` points at a `.ird` or a key file. The key is not printed.
 
 Exit codes:
 
@@ -76,4 +86,4 @@ An unrecognized file names only the readers this version has: ISO 9660/Joliet (i
 dotnet test
 ```
 
-Tests build tiny ISO 9660 and XDVDFS images, and tiny PARAM.SFO, PNG, XEX and XBE structures, in a temporary directory. They do not use retail game data. Desktop tests keep settings and the art cache in a temporary directory as well, so a sample image is not added to the library on this machine. Library removal is tested the same way: the temporary image file is still there afterwards, and only the temporary cache entry is deleted.
+Tests build tiny ISO 9660 and XDVDFS images, and tiny PARAM.SFO, PNG, XEX and XBE structures, in a temporary directory. They do not use retail game data. Drive tests put those images behind an in-memory block device, including injected read errors, and do not open a real optical drive. Desktop tests keep settings and the art cache in a temporary directory as well, so a sample image is not added to the library on this machine. Library removal is tested the same way: the temporary image file is still there afterwards, and only the temporary cache entry is deleted.

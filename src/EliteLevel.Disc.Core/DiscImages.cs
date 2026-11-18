@@ -1,8 +1,10 @@
 using System.Runtime.CompilerServices;
+using EliteLevel.Disc.Core.Drives;
 using EliteLevel.Disc.Core.Formats;
 using EliteLevel.Disc.Core.Formats.Xdvdfs;
 
 [assembly: InternalsVisibleTo("EliteLevel.Disc.Core.Tests")]
+[assembly: InternalsVisibleTo("EliteLevel.Disc.App.Tests")]
 
 namespace EliteLevel.Disc.Core;
 
@@ -32,6 +34,11 @@ public static class DiscImages
     public static Task<IDiscImage> OpenAsync(string path, OpenOptions? options = null, CancellationToken cancellationToken = default)
     {
         options ??= new OpenOptions();
+        if (OpticalDrives.IsDrivePath(path))
+        {
+            return OpticalDrives.OpenImageAsync(path, options, cancellationToken);
+        }
+
         if (Directory.Exists(path))
         {
             return new FolderFormat().OpenPathAsync(path, options, cancellationToken);
@@ -47,6 +54,17 @@ public static class DiscImages
     }
 
     public static Task<IDiscImage> OpenAsync(Stream source, string? displayName, OpenOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        options ??= new OpenOptions();
+        if (!source.CanRead || !source.CanSeek)
+        {
+            throw new DiscFormatException("The image stream must be readable and seekable.");
+        }
+
+        return OpenOwnedAsync(source, displayName ?? "image", options, cancellationToken);
+    }
+
+    internal static Task<IDiscImage> OpenStreamAsync(Stream source, string? displayName, OpenOptions? options = null, CancellationToken cancellationToken = default)
     {
         options ??= new OpenOptions();
         if (!source.CanRead || !source.CanSeek)

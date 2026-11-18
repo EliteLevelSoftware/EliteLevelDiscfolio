@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using EliteLevel.Disc.App.Services;
 using EliteLevel.Disc.Core;
+using EliteLevel.Disc.Core.Drives;
 using Velopack;
 using Velopack.Exceptions;
 using EliteLevel.Disc.Core.Extract;
@@ -29,6 +31,8 @@ public partial class MainViewModel : ObservableObject
     private readonly HashSet<string> _expanded = new(StringComparer.OrdinalIgnoreCase);
     private int _generation;
     private bool _extractAll;
+    private CancellationTokenSource? _ripCancel;
+    private DiscKey? _discKey;
 
     public MainViewModel()
     {
@@ -45,7 +49,7 @@ public partial class MainViewModel : ObservableObject
         _cache = new TitleArtCache(SettingsStore.CacheDirectory);
         foreach (var recent in _settings.Recent)
         {
-            var cached = _cache.TryGet(recent.Path);
+            var cached = string.IsNullOrEmpty(recent.CacheKey) ? _cache.TryGet(recent.Path) : _cache.TryGetKey(recent.CacheKey);
             var title = recent.Title;
             var titleId = recent.TitleId ?? "";
             string? icon = null;
@@ -64,7 +68,7 @@ public partial class MainViewModel : ObservableObject
                 icon = cached.IconPath;
             }
 
-            Recent.Add(new RecentItem(recent.Path, title, recent.Meta, titleId, icon));
+            Recent.Add(new RecentItem(recent.Path, title, recent.Meta, titleId, icon, recent.IsDrive, recent.CacheKey));
         }
 
         OpenCount = Recent.Count;
@@ -130,6 +134,31 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool updateReady;
     [ObservableProperty] private string updateMessage = "";
     [ObservableProperty] private string libraryMessage = "";
+    [ObservableProperty] private bool isDriveSource;
+    [ObservableProperty] private string driveNotice = "";
+    [ObservableProperty] private string discKeyStatus = "";
+    [ObservableProperty] private bool showDrivePicker;
+    [ObservableProperty] private string drivePickerMessage = "";
+    [ObservableProperty] private string? selectedDriveId;
+    [ObservableProperty] private bool showRipDialog;
+    [ObservableProperty] private bool isRipping;
+    [ObservableProperty] private bool ripFinished;
+    [ObservableProperty] private string ripOutput = "";
+    [ObservableProperty] private string ripRetriesText = "5";
+    [ObservableProperty] private string ripStatus = "";
+    [ObservableProperty] private string ripSha256 = "";
+    [ObservableProperty] private string ripSha1 = "";
+    [ObservableProperty] private string ripMd5 = "";
+    [ObservableProperty] private string ripBadSectors = "";
+    [ObservableProperty] private string? rippedIsoPath;
+
+    public ObservableCollection<DriveRow> Drives { get; } = [];
+
+    public bool HasDriveNotice => !string.IsNullOrWhiteSpace(DriveNotice);
+
+    public bool ShowDiscKey => IsDriveSource && PlatformTag == "PS3";
+
+    public bool HasDiscKey => _discKey is not null;
 
     public int UpdateChannelIndex
     {
@@ -278,7 +307,9 @@ public partial class MainViewModel : ObservableObject
             Sha1Full = null;
             Md5Full = null;
             var metadata = TitleMetadataReader.Read(next);
-            var cached = _cache.Store(path, metadata);
+            var cached = next.Identity.FromDrive && !string.IsNullOrEmpty(next.Identity.CacheKey)
+                ? _cache.StoreKey(next.Identity.CacheKey, metadata)
+                : _cache.Store(path, metadata);
             ApplyIdentity(next.Identity, path, metadata, cached);
             RebuildRows();
             Remember(path, next.Identity);
@@ -294,7 +325,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
             await ClearImageAsync().ConfigureAwait(true);
-            ErrorMessage = "The image could not be opened.";
+            ErrorMessage = OpticalDrives.IsDrivePath(path) ? ex.Message : "The image could not be opened.";
             ErrorDetail = ex.Message;
         }
         finally
@@ -422,6 +453,20 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnPageChanged(string value) => NotifyVisibility();
 
+    partial void OnDriveNoticeChanged(string value) => OnPropertyChanged(nameof(HasDriveNotice));
+
+    partial void OnIsDriveSourceChanged(bool value) => OnPropertyChanged(nameof(ShowDiscKey));
+
+    partial void OnPlatformTagChanged(string value) => OnPropertyChanged(nameof(ShowDiscKey));
+
+    partial void OnSelectedDriveIdChanged(string? value)
+    {
+        foreach (var drive in Drives)
+        {
+            drive.IsSelected = drive.Id == value;
+        }
+    }
+
     partial void OnSearchTextChanged(string value)
     {
         RebuildRows();
@@ -537,8 +582,15 @@ public partial class MainViewModel : ObservableObject
             "PlayStation 3" => "PS3",
             "Xbox 360" => "360",
             "Xbox" => "Xbox",
+            "PlayStation 2" => "PS2",
+            "PlayStation 1" => "PS1",
             _ => ""
         };
+        IsDriveSource = identity.FromDrive;
+        DriveNotice = identity.Notice ?? "";
+        _discKey = null;
+        DiscKeyStatus = "";
+        OnPropertyChanged(nameof(HasDiscKey));
         LibraryCount = (int)Math.Min(identity.FileCount, int.MaxValue);
         Locator = identity.FormatDisplayName;
         Breadcrumb = "/";
@@ -621,7 +673,10 @@ public partial class MainViewModel : ObservableObject
     private void Remember(string path, ImageIdentity identity)
     {
         var title = VolumeTitle;
-        var meta = (identity.Platform ?? identity.FormatDisplayName) + "  ·  " + ByteSize.Format(identity.TotalBytes);
+        var meta = (identity.FromDrive ? "Disc drive  ·  " : "")
+            + (identity.Platform ?? identity.FormatDisplayName)
+            + "  ·  "
+            + ByteSize.Format(identity.TotalBytes);
         var full = FullPath(path);
         for (var i = Recent.Count - 1; i >= 0; i--)
         {
@@ -631,8 +686,10 @@ public partial class MainViewModel : ObservableObject
             }
         }
 
-        var icon = _cache.TryGet(path)?.IconPath;
-        Recent.Insert(0, new RecentItem(path, title, meta, TitleId, icon));
+        var icon = identity.FromDrive && !string.IsNullOrEmpty(identity.CacheKey)
+            ? _cache.TryGetKey(identity.CacheKey)?.IconPath
+            : _cache.TryGet(path)?.IconPath;
+        Recent.Insert(0, new RecentItem(path, title, meta, TitleId, icon, identity.FromDrive, identity.CacheKey));
         while (Recent.Count > 8)
         {
             Recent.RemoveAt(Recent.Count - 1);
@@ -655,13 +712,23 @@ public partial class MainViewModel : ObservableObject
             await ClearImageAsync().ConfigureAwait(true);
         }
 
-        _cache.Remove(path);
+        string? cacheKey = null;
         for (var i = Recent.Count - 1; i >= 0; i--)
         {
             if (string.Equals(FullPath(Recent[i].Path), full, StringComparison.OrdinalIgnoreCase))
             {
+                cacheKey ??= Recent[i].CacheKey;
                 Recent.RemoveAt(i);
             }
+        }
+
+        if (!string.IsNullOrEmpty(cacheKey))
+        {
+            _cache.RemoveKey(cacheKey);
+        }
+        else
+        {
+            _cache.Remove(path);
         }
 
         LibraryMessage = "";
@@ -670,6 +737,228 @@ public partial class MainViewModel : ObservableObject
 
     [RelayCommand]
     private Task RemoveOpenFromLibrary() => RemoveFromLibrary(_openPath);
+
+    [RelayCommand]
+    private async Task OpenDrivePicker()
+    {
+        ShowDrivePicker = true;
+        await RefreshDrives().ConfigureAwait(true);
+    }
+
+    [RelayCommand]
+    private async Task RefreshDrives()
+    {
+        DrivePickerMessage = "Looking for drives…";
+        SelectedDriveId = null;
+        try
+        {
+            var listed = await Task.Run(() => OpticalDrives.List()).ConfigureAwait(true);
+            Drives.Clear();
+            if (listed.Count == 0)
+            {
+                DrivePickerMessage = "No optical drive with a disc was found.";
+                return;
+            }
+
+            DrivePickerMessage = "Reading the disc…";
+            foreach (var drive in listed)
+            {
+                var described = await Task.Run(() => OpticalDrives.DescribeAsync(drive)).ConfigureAwait(true);
+                Drives.Add(new DriveRow
+                {
+                    Id = described.Id,
+                    DevicePath = described.DevicePath,
+                    VolumeLabel = string.IsNullOrWhiteSpace(described.VolumeLabel) ? "No label" : described.VolumeLabel!,
+                    SizeText = ByteSize.Format(described.MediaBytes),
+                    Platform = described.Error ?? described.Platform ?? described.FormatName ?? "Unknown",
+                    Notice = described.Notice
+                });
+            }
+
+            DrivePickerMessage = Drives.Count == 0 ? "No optical drive with a disc was found." : "";
+            if (Drives.Count > 0)
+            {
+                SelectedDriveId = Drives[0].Id;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            DrivePickerMessage = ex.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenSelectedDrive()
+    {
+        if (string.IsNullOrEmpty(SelectedDriveId))
+        {
+            DrivePickerMessage = "Choose a drive.";
+            return;
+        }
+
+        var id = SelectedDriveId;
+        ShowDrivePicker = false;
+        await OpenAsync(id).ConfigureAwait(true);
+    }
+
+    [RelayCommand]
+    private void CloseDrivePicker() => ShowDrivePicker = false;
+
+    [RelayCommand]
+    private void BeginRip()
+    {
+        if (!IsDriveSource || _openPath is null)
+        {
+            return;
+        }
+
+        RipFinished = false;
+        RipStatus = "";
+        RipSha256 = "";
+        RipSha1 = "";
+        RipMd5 = "";
+        RipBadSectors = "";
+        RippedIsoPath = null;
+        if (string.IsNullOrWhiteSpace(RipOutput))
+        {
+            RipOutput = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                SanitizeFileName(VolumeTitle) + ".iso");
+        }
+
+        ShowRipDialog = true;
+    }
+
+    [RelayCommand]
+    private async Task StartRip()
+    {
+        if (IsRipping || _openPath is null || !IsDriveSource)
+        {
+            return;
+        }
+
+        if (!int.TryParse(RipRetriesText.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var attempts) || attempts is < 1 or > 20)
+        {
+            RipStatus = "Retries is a number from 1 to 20.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(RipOutput))
+        {
+            RipStatus = "Choose an ISO file.";
+            return;
+        }
+
+        IBlockDevice device;
+        try
+        {
+            device = OpticalDrives.Open(_openPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            RipStatus = ex.Message;
+            return;
+        }
+
+        _ripCancel?.Dispose();
+        _ripCancel = new CancellationTokenSource();
+        IsRipping = true;
+        RipFinished = false;
+        try
+        {
+            var progress = new Progress<RipProgress>(update =>
+            {
+                var percent = update.TotalSectors == 0
+                    ? 100
+                    : (int)(update.CompletedSectors * 100 / update.TotalSectors);
+                RipStatus = string.Create(
+                    CultureInfo.CurrentCulture,
+                    $"Ripping {percent}%  ·  sector {update.CompletedSectors:N0} of {update.TotalSectors:N0}  ·  bad {update.BadSectors:N0}");
+            });
+            var result = await IsoRipper.RipAsync(
+                device,
+                RipOutput.Trim(),
+                new RipOptions { Attempts = attempts },
+                progress,
+                _ripCancel.Token).ConfigureAwait(true);
+            RipSha256 = result.Sha256;
+            RipSha1 = result.Sha1;
+            RipMd5 = result.Md5;
+            RipBadSectors = result.BadSectors.Count == 0
+                ? "Bad sectors: none"
+                : "Bad sectors: " + string.Join(", ", result.BadSectors.Take(12).Select(sector => sector.ToString(CultureInfo.InvariantCulture)))
+                    + (result.BadSectors.Count > 12 ? "…" : "");
+            RipStatus = result.BadSectors.Count == 0
+                ? "Rip finished. No bad sectors."
+                : string.Create(CultureInfo.CurrentCulture, $"Rip finished. {result.BadSectors.Count:N0} bad sectors were stored as zeros.");
+            RippedIsoPath = result.OutputPath;
+            RipFinished = true;
+            HasNotification = true;
+        }
+        catch (OperationCanceledException)
+        {
+            RipStatus = "Rip cancelled.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            RipStatus = ex.Message;
+        }
+        finally
+        {
+            device.Dispose();
+            IsRipping = false;
+        }
+    }
+
+    [RelayCommand]
+    private void CancelRip() => _ripCancel?.Cancel();
+
+    [RelayCommand]
+    private void CloseRip()
+    {
+        if (IsRipping)
+        {
+            _ripCancel?.Cancel();
+            return;
+        }
+
+        ShowRipDialog = false;
+    }
+
+    [RelayCommand]
+    private async Task AddRipToLibrary()
+    {
+        if (string.IsNullOrEmpty(RippedIsoPath))
+        {
+            return;
+        }
+
+        var path = RippedIsoPath;
+        ShowRipDialog = false;
+        await OpenAsync(path).ConfigureAwait(true);
+    }
+
+    public void LoadDiscKey(string path)
+    {
+        if (!DiscKeyFile.TryLoad(path, out var key, out var error) || key is null)
+        {
+            _discKey = null;
+            DiscKeyStatus = error ?? "That file is not a .ird or a 16-byte disc key.";
+            OnPropertyChanged(nameof(HasDiscKey));
+            return;
+        }
+
+        _discKey = key;
+        DiscKeyStatus = "Disc key loaded. Game files stay encrypted in this version.";
+        OnPropertyChanged(nameof(HasDiscKey));
+    }
+
+    private static string SanitizeFileName(string title)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var cleaned = new string(title.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray()).Trim().TrimEnd('.');
+        return cleaned.Length == 0 ? "disc" : cleaned;
+    }
 
     [RelayCommand]
     private async Task ClearMissing()
@@ -876,7 +1165,9 @@ public partial class MainViewModel : ObservableObject
             Path = item.Path,
             Title = item.Title,
             Meta = item.Meta,
-            TitleId = item.TitleId
+            TitleId = item.TitleId,
+            IsDrive = item.IsDrive,
+            CacheKey = item.CacheKey
         }).ToList();
         Persist();
         RebuildVisibleRecent();
@@ -886,6 +1177,11 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
+            if (OpticalDrives.IsDrivePath(path))
+            {
+                return OpticalDrives.MediaPresent(path);
+            }
+
             return File.Exists(path) || Directory.Exists(path);
         }
         catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException or NotSupportedException)
@@ -898,6 +1194,11 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
+            if (OpticalDrives.IsDrivePath(path))
+            {
+                return OpticalDrives.Canonical(path);
+            }
+
             return Path.GetFullPath(path);
         }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or IOException)
@@ -938,7 +1239,7 @@ public partial class MainViewModel : ObservableObject
         var version = typeof(MainViewModel).Assembly.GetName().Version;
         if (version is null)
         {
-            return "0.3.1";
+            return "0.4.0";
         }
 
         return string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{version.Major}.{version.Minor}.{Math.Max(version.Build, 0)}");
@@ -950,6 +1251,11 @@ public partial class MainViewModel : ObservableObject
         _openPath = null;
         IconPath = null;
         BannerPath = null;
+        IsDriveSource = false;
+        DriveNotice = "";
+        DiscKeyStatus = "";
+        _discKey = null;
+        OnPropertyChanged(nameof(HasDiscKey));
         if (_image is not null)
         {
             await _image.DisposeAsync().ConfigureAwait(true);
@@ -990,7 +1296,26 @@ public partial class FileRow : ObservableObject
     public global::Avalonia.Thickness Indent => new(8 + Depth * 20, 0, 8, 0);
 }
 
-public sealed record RecentItem(string Path, string Title, string Meta, string TitleId = "", string? IconPath = null)
+public sealed record RecentItem(
+    string Path,
+    string Title,
+    string Meta,
+    string TitleId = "",
+    string? IconPath = null,
+    bool IsDrive = false,
+    string? CacheKey = null)
 {
     public string Seed => Path;
+}
+
+public partial class DriveRow : ObservableObject
+{
+    public required string Id { get; init; }
+    public required string DevicePath { get; init; }
+    public required string VolumeLabel { get; init; }
+    public required string SizeText { get; init; }
+    public required string Platform { get; init; }
+    public string? Notice { get; init; }
+    [ObservableProperty] private bool isSelected;
+    public string Title => Id + "  ·  " + VolumeLabel;
 }

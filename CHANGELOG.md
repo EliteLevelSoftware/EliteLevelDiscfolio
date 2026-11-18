@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0
+
+- Open a disc in an optical drive and browse it the same way as an image file. The drive is read a sector at a time and is never written. Windows uses the drive letter, Linux uses `/dev/sr*` and `/dev/cdrom`, and macOS tries `/dev/rdiskN` when the disk is optical.
+- Rip to ISO copies the disc with progress and cancel. A sector that still fails after the configured retries is stored as zeros and reported. SHA-256, SHA-1 and MD5 are written next to the ISO. The app can then add that ISO to the library.
+- Files and folders can be extracted straight from the drive. Title art is cached from the volume label, the disc size and a hash of the first sectors, so it does not depend on a file path.
+- PlayStation 3 game data on a disc is encrypted. The file list can be read. A `.ird` or a 16-byte key you already have can be loaded; this version does not decrypt the files. Xbox and Xbox 360 game partitions need a drive with flashed firmware. The video partition and anything else the drive can see stay readable. Audio CD tracks are not supported.
+- A drive entry in the library is marked as a drive. A drive with no disc counts as missing and is removed only when you click Clear missing.
+- The command line lists drives with `drives` (`--json` included). `info`, `list` (`ls`), `extract` and `art` accept a drive such as `D:` or `/dev/sr0`. `rip <drive> --out <file.iso>` writes the image.
+- If the operating system refuses raw access, Discfolio explains that Windows needs an administrator and Linux needs permission to read the device, instead of crashing.
+
 ## 0.3.1
 
 - Right-click Remove from library on a library tile, and on the open images list, removes that entry and its cached art. The image file is left in place.

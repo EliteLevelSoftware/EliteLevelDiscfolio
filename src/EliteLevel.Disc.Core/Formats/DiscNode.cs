@@ -1,3 +1,4 @@
+using System.Text;
 using EliteLevel.Disc.Core.IO;
 using EliteLevel.Disc.Core.Safety;
 
@@ -153,9 +154,28 @@ internal static class NodeWalk
             names.Add(node.Name);
         }
 
-        if (names.Contains("PS3_GAME") || names.Contains("PS3_UPDATE"))
+        if (names.Contains("PS3_GAME") || names.Contains("PS3_UPDATE") || names.Contains("PS3_DISC.SFB"))
         {
             return "PlayStation 3";
+        }
+
+        var system = FindByName(root, "SYSTEM.CNF");
+        if (system is not null)
+        {
+            var text = ReadSmallText(system);
+            if (text is not null)
+            {
+                if (text.Contains("BOOT2", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "PlayStation 2";
+                }
+
+                var withoutBoot2 = text.Replace("BOOT2", "", StringComparison.OrdinalIgnoreCase);
+                if (withoutBoot2.Contains("BOOT", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "PlayStation 1";
+                }
+            }
         }
 
         if (formatId == "xdvdfs")
@@ -174,5 +194,39 @@ internal static class NodeWalk
         }
 
         return null;
+    }
+
+    private static DiscNode? FindByName(DiscNode root, string name)
+    {
+        foreach (var node in Walk(root, includeSystem: true))
+        {
+            if (node.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+            {
+                return node;
+            }
+        }
+
+        return null;
+    }
+
+    private static string? ReadSmallText(DiscNode node)
+    {
+        if (node.IsDirectory || node.Size <= 0 || node.Size > 8192)
+        {
+            return null;
+        }
+
+        try
+        {
+            using var stream = node.OpenRead();
+            var count = (int)Math.Min(node.Size, 8192);
+            var buffer = new byte[count];
+            var read = stream.Read(buffer, 0, buffer.Length);
+            return Encoding.ASCII.GetString(buffer, 0, read);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ObjectDisposedException)
+        {
+            return null;
+        }
     }
 }
