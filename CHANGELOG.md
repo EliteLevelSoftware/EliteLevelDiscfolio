@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1
+
+- Release files are named for the system they install. Download `Discfolio-<version>-Windows-Setup.exe`, `Discfolio-<version>-macOS-AppleSilicon-Setup.pkg`, or `Discfolio-<version>-Linux-x64.AppImage`. Portable zips and delta packages are no longer published.
+- `*-full.nupkg` and `releases.*.json` stay on the release under the names the built-in updater requests. The release notes label those files so they are not installers. `SHA256SUMS.txt` lists every other file on the release under the name that was uploaded.
+
 ## 0.6.0
 
 - NSZ and XCZ images open like NSP and XCI. An NSZ is a PFS0 whose NCA files are stored as NCZ. An XCZ is an XCI whose NCA files are stored as NCZ. The entries are listed as the decompressed NCA. With the same keys as 0.5.0, RomFS, ExeFS, the title, the title ID, the version and the icon are read from that NCA.

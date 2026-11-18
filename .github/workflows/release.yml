@@ -53,6 +53,7 @@ jobs:
         shell: bash
         run: |
           version="${GITHUB_REF_NAME#v}"
+          track="${{ steps.version.outputs.track }}"
           awk -v ver="$version" '
             $0 == "## " ver { found=1; next }
             found && /^## / { exit }
@@ -62,6 +63,35 @@ jobs:
             echo "CHANGELOG.md has no notes for $version" >&2
             exit 1
           fi
+          cat > release-body.md <<'EOF'
+          ## Download
+
+          | File | What it is |
+          |---|---|
+          | `Discfolio-VERSION-Windows-Setup.exe` | Windows installer. Installs per user to `%LocalAppData%\Discfolio`, adds Start Menu and Desktop shortcuts, and does not need administrator rights. |
+          | `Discfolio-VERSION-macOS-AppleSilicon-Setup.pkg` | macOS installer for Apple silicon. Unsigned, so Gatekeeper asks before the app opens. |
+          | `Discfolio-VERSION-Linux-x64.AppImage` | Linux AppImage for x64. Mark it executable and run it. Attached when the Linux pack succeeds. |
+
+          `SHA256SUMS.txt` is the SHA-256 digest of the files on this release.
+
+          ## Auto-updater files (you don't need these)
+
+          Discfolio's built-in updater downloads these files. Leave them on the release.
+
+          | File | What it is |
+          |---|---|
+          | `Discfolio-VERSION-win-x64-TRACK-full.nupkg` | Windows update package. |
+          | `Discfolio-VERSION-linux-x64-TRACK-full.nupkg` | Linux update package. |
+          | `Discfolio-VERSION-osx-arm64-TRACK-full.nupkg` | macOS update package. |
+          | `releases.win-x64-TRACK.json` | Windows update index. |
+          | `releases.linux-x64-TRACK.json` | Linux update index. |
+          | `releases.osx-arm64-TRACK.json` | macOS update index. |
+
+          ## VERSION
+          EOF
+          sed "s/VERSION/${version}/g; s/TRACK/${track}/g" release-body.md > release-body.out
+          mv release-body.out release-body.md
+          cat release-notes.md >> release-body.md
       - name: Publish
         run: dotnet publish src/EliteLevel.Disc.App/EliteLevel.Disc.App.csproj -c Release -r win-x64 --self-contained true -o artifacts/pack
       - name: Install vpk
@@ -71,31 +101,17 @@ jobs:
           "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Append
       - name: Pack
         shell: pwsh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $ErrorActionPreference = "Continue"
           $PSNativeCommandUseErrorActionPreference = $false
           $channel = "win-x64-${{ steps.version.outputs.track }}"
           $out = "artifacts/velopack"
           New-Item -ItemType Directory -Force $out | Out-Null
-          $download = @("download","github","--repoUrl","https://github.com/EliteLevelSoftware/EliteLevelDiscfolio","--channel",$channel,"--outputDir",$out,"--token",$env:GITHUB_TOKEN)
-          if ("${{ steps.version.outputs.track }}" -eq "prerelease") { $download += "--pre" }
-          & vpk @download
-          $delta = "None"
-          if ($LASTEXITCODE -eq 0 -and @(Get-ChildItem $out -Filter *-full.nupkg -ErrorAction SilentlyContinue).Count -gt 0) { $delta = "BestSpeed" }
-          & vpk --yes pack --packId Discfolio --packVersion "${{ steps.version.outputs.version }}" --packDir artifacts/pack --mainExe Discfolio.exe --packTitle "EliteLevel Discfolio" --packAuthors "Elite Level Software" --icon src/EliteLevel.Disc.App/Assets/icon.ico --channel $channel --shortcuts Desktop,StartMenuRoot --delta $delta --releaseNotes release-notes.md --outputDir $out
+          & vpk --yes pack --packId Discfolio --packVersion "${{ steps.version.outputs.version }}" --packDir artifacts/pack --mainExe Discfolio.exe --packTitle "EliteLevel Discfolio" --packAuthors "Elite Level Software" --icon src/EliteLevel.Disc.App/Assets/icon.ico --channel $channel --shortcuts Desktop,StartMenuRoot --delta none --noPortable --releaseNotes release-notes.md --outputDir $out
           if ($LASTEXITCODE -ne 0) { throw "vpk pack failed" }
-          $setup = @(Get-ChildItem $out -Filter *Setup.exe)
-          $zip = @(Get-ChildItem $out -Filter *Portable.zip)
-          $full = @(Get-ChildItem $out -Filter *-full.nupkg)
+          bash scripts/rename-release-assets.sh $out "${{ steps.version.outputs.version }}" windows $channel
+          if ($LASTEXITCODE -ne 0) { throw "rename failed" }
           Get-ChildItem $out | Select-Object -ExpandProperty Name
-          if ($setup.Count -lt 1 -or $zip.Count -lt 1 -or $full.Count -lt 1) { throw "vpk pack did not produce the setup, portable zip, and full package" }
-          $lines = foreach ($file in (Get-ChildItem $out -File)) {
-            $hash = (Get-FileHash $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-            "$hash  $($file.Name)"
-          }
-          Set-Content -Path artifacts/SHA256SUMS.txt -Value $lines -Encoding ascii
       - name: Upload
         shell: pwsh
         env:
@@ -106,10 +122,10 @@ jobs:
           if ("${{ steps.version.outputs.track }}" -eq "prerelease") { $upload += "--pre" }
           & vpk @upload
           if ($LASTEXITCODE -ne 0) { throw "vpk upload failed" }
-      - name: Attach checksums
+      - name: Describe the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "${{ github.ref_name }}" artifacts/SHA256SUMS.txt --clobber
+        run: gh release edit "${{ github.ref_name }}" --repo EliteLevelSoftware/EliteLevelDiscfolio --notes-file release-body.md
 
   linux:
     name: Linux pack
@@ -140,13 +156,24 @@ jobs:
           dotnet tool install --global vpk --version 1.2.161
           export PATH="$PATH:$HOME/.dotnet/tools"
           tag="${GITHUB_REF_NAME#v}"
-          if [[ "$tag" == *-* ]]; then track=prerelease; pre=(--pre); else track=stable; pre=(); fi
+          if [[ "$tag" == *-* ]]; then track=prerelease; else track=stable; fi
           channel="linux-x64-$track"
           mkdir -p artifacts/velopack
-          vpk download github --repoUrl https://github.com/EliteLevelSoftware/EliteLevelDiscfolio --channel "$channel" --outputDir artifacts/velopack --token "$GITHUB_TOKEN" "${pre[@]}" || true
-          if compgen -G "artifacts/velopack/*-full.nupkg" > /dev/null; then delta=BestSpeed; else delta=None; fi
-          vpk --yes pack --packId Discfolio --packVersion "$tag" --packDir artifacts/pack --mainExe Discfolio --packTitle "EliteLevel Discfolio" --packAuthors "Elite Level Software" --icon src/EliteLevel.Disc.App/Assets/icon.png --channel "$channel" --delta "$delta" --releaseNotes release-notes.md --outputDir artifacts/velopack
-          vpk upload github --outputDir artifacts/velopack --channel "$channel" --repoUrl https://github.com/EliteLevelSoftware/EliteLevelDiscfolio --token "$GITHUB_TOKEN" --publish --merge --releaseName "EliteLevel Discfolio $tag" --tag "$GITHUB_REF_NAME" "${pre[@]}"
+          vpk --yes pack --packId Discfolio --packVersion "$tag" --packDir artifacts/pack --mainExe Discfolio --packTitle "EliteLevel Discfolio" --packAuthors "Elite Level Software" --icon src/EliteLevel.Disc.App/Assets/icon.png --channel "$channel" --delta none --noPortable --releaseNotes release-notes.md --outputDir artifacts/velopack
+          bash scripts/rename-release-assets.sh artifacts/velopack "$tag" linux "$channel"
+          upload=(
+            vpk upload github
+            --outputDir artifacts/velopack
+            --channel "$channel"
+            --repoUrl https://github.com/EliteLevelSoftware/EliteLevelDiscfolio
+            --token "$GITHUB_TOKEN"
+            --publish
+            --merge
+            --releaseName "EliteLevel Discfolio $tag"
+            --tag "$GITHUB_REF_NAME"
+          )
+          if [[ "$track" == prerelease ]]; then upload+=(--pre); fi
+          "${upload[@]}"
 
   macos:
     name: macOS pack
@@ -181,16 +208,6 @@ jobs:
           if [[ "$tag" == *-* ]]; then track=prerelease; else track=stable; fi
           channel="osx-arm64-$track"
           mkdir -p artifacts/velopack
-          download=(
-            vpk download github
-            --repoUrl https://github.com/EliteLevelSoftware/EliteLevelDiscfolio
-            --channel "$channel"
-            --outputDir artifacts/velopack
-            --token "$GITHUB_TOKEN"
-          )
-          if [[ "$track" == prerelease ]]; then download+=(--pre); fi
-          "${download[@]}" || true
-          if compgen -G "artifacts/velopack/*-full.nupkg" > /dev/null; then delta=BestSpeed; else delta=None; fi
           # vpk builds the .app bundle and accepts only an .icns icon.
           vpk --yes pack \
             --packId Discfolio \
@@ -201,18 +218,12 @@ jobs:
             --packAuthors "Elite Level Software" \
             --icon src/EliteLevel.Disc.App/Assets/icon.icns \
             --channel "$channel" \
-            --delta "$delta" \
+            --delta none \
+            --noPortable \
             --releaseNotes release-notes.md \
             --outputDir artifacts/velopack
+          bash scripts/rename-release-assets.sh artifacts/velopack "$tag" macos "$channel"
           ls -la artifacts/velopack
-          missing=0
-          compgen -G "artifacts/velopack/*-full.nupkg" > /dev/null || missing=1
-          compgen -G "artifacts/velopack/*-Portable.zip" > /dev/null || missing=1
-          compgen -G "artifacts/velopack/*-Setup.pkg" > /dev/null || missing=1
-          if [[ "$missing" -ne 0 ]]; then
-            echo "vpk pack did not produce the full package, portable zip, and setup pkg" >&2
-            exit 1
-          fi
           upload=(
             vpk upload github
             --outputDir artifacts/velopack
@@ -226,3 +237,66 @@ jobs:
           )
           if [[ "$track" == prerelease ]]; then upload+=(--pre); fi
           "${upload[@]}"
+
+  checksums:
+    name: SHA256SUMS
+    needs: [windows, linux, macos]
+    if: always() && needs.windows.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write checksums for the uploaded assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          repo=EliteLevelSoftware/EliteLevelDiscfolio
+          tag="${GITHUB_REF_NAME#v}"
+          if [[ "$tag" == *-* ]]; then track=prerelease; else track=stable; fi
+          release_json=$(mktemp)
+          ready=0
+          for _ in 1 2 3 4 5 6; do
+            gh api "repos/${repo}/releases/tags/${GITHUB_REF_NAME}" > "$release_json"
+            if jq -e '.assets | length > 0 and all(.[]; .digest != null and .digest != "")' "$release_json" >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 10
+          done
+          if [[ "$ready" -ne 1 ]]; then
+            echo "a release asset is missing a digest" >&2
+            exit 1
+          fi
+          jq -r '.assets[] | select(.name != "SHA256SUMS.txt") | "\(.digest | sub("^sha256:"; "") | ascii_downcase)  \(.name)"' "$release_json" \
+            | LC_ALL=C sort -k2 > SHA256SUMS.txt
+          if ! grep -E -q '^[0-9a-f]{64}  [^ ].+$' SHA256SUMS.txt; then
+            echo "SHA256SUMS.txt is empty or malformed" >&2
+            exit 1
+          fi
+          if grep -E -v '^[0-9a-f]{64}  [^ ].+$' SHA256SUMS.txt; then
+            echo "SHA256SUMS.txt has a line that is not a digest" >&2
+            exit 1
+          fi
+          if grep -E '(Portable\.zip|-delta\.nupkg)$' SHA256SUMS.txt; then
+            echo "a portable zip or delta package was uploaded" >&2
+            exit 1
+          fi
+          require_name() {
+            if ! grep -F -q "  $1" SHA256SUMS.txt; then
+              echo "SHA256SUMS.txt is missing $1" >&2
+              exit 1
+            fi
+          }
+          require_name "Discfolio-${tag}-Windows-Setup.exe"
+          require_name "Discfolio-${tag}-win-x64-${track}-full.nupkg"
+          require_name "releases.win-x64-${track}.json"
+          if grep -F -q "linux-x64-${track}" SHA256SUMS.txt || grep -F -q "Linux-x64.AppImage" SHA256SUMS.txt; then
+            require_name "Discfolio-${tag}-Linux-x64.AppImage"
+            require_name "Discfolio-${tag}-linux-x64-${track}-full.nupkg"
+            require_name "releases.linux-x64-${track}.json"
+          fi
+          if grep -F -q "osx-arm64-${track}" SHA256SUMS.txt || grep -F -q "macOS-AppleSilicon-Setup.pkg" SHA256SUMS.txt; then
+            require_name "Discfolio-${tag}-macOS-AppleSilicon-Setup.pkg"
+            require_name "Discfolio-${tag}-osx-arm64-${track}-full.nupkg"
+            require_name "releases.osx-arm64-${track}.json"
+          fi
+          gh release upload "$GITHUB_REF_NAME" SHA256SUMS.txt --repo "$repo" --clobber

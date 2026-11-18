@@ -54,13 +54,11 @@ jobs:
         run: |
           $version = (([xml](Get-Content -Raw Directory.Build.props)).Project.PropertyGroup.Version | Select-Object -First 1).Trim()
           New-Item -ItemType Directory -Force artifacts/velopack | Out-Null
-          vpk --yes pack --packId Discfolio --packVersion $version --packDir artifacts/pack --mainExe Discfolio.exe --packTitle "EliteLevel Discfolio" --packAuthors "Elite Level Software" --icon src/EliteLevel.Disc.App/Assets/icon.ico --channel win-x64-stable --shortcuts Desktop,StartMenuRoot --delta None --outputDir artifacts/velopack
+          vpk --yes pack --packId Discfolio --packVersion $version --packDir artifacts/pack --mainExe Discfolio.exe --packTitle "EliteLevel Discfolio" --packAuthors "Elite Level Software" --icon src/EliteLevel.Disc.App/Assets/icon.ico --channel win-x64-stable --shortcuts Desktop,StartMenuRoot --delta none --noPortable --outputDir artifacts/velopack
           if ($LASTEXITCODE -ne 0) { throw "vpk pack failed" }
-          $setup = @(Get-ChildItem artifacts/velopack -Filter *Setup.exe)
-          $zip = @(Get-ChildItem artifacts/velopack -Filter *Portable.zip)
-          $full = @(Get-ChildItem artifacts/velopack -Filter *-full.nupkg)
+          bash scripts/rename-release-assets.sh artifacts/velopack $version windows win-x64-stable
+          if ($LASTEXITCODE -ne 0) { throw "rename failed" }
           Get-ChildItem artifacts/velopack | Select-Object -ExpandProperty Name
-          if ($setup.Count -lt 1 -or $zip.Count -lt 1 -or $full.Count -lt 1) { throw "vpk pack did not produce the setup, portable zip, and full package" }
       - uses: actions/upload-artifact@v4
         with:
           name: velopack-dry-run

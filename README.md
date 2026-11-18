@@ -23,13 +23,17 @@ A read-only explorer for console disc images and folder dumps.
 
 ## Download
 
-Windows builds are on the [releases](https://github.com/EliteLevelSoftware/EliteLevelDiscfolio/releases) page: `Setup.exe`, the portable zip, and `SHA256SUMS.txt`.
+Installers are on the [releases](https://github.com/EliteLevelSoftware/EliteLevelDiscfolio/releases) page. `<version>` is the release version, for example `0.6.1`.
 
-`Setup.exe` installs per user to `%LocalAppData%\Discfolio`, adds Start Menu and Desktop shortcuts, and registers in Installed apps. It does not need administrator rights. Uninstall from Installed apps. The portable zip runs without installing. `SHA256SUMS.txt` is the SHA-256 digest of each file on that release.
+`Discfolio-<version>-Windows-Setup.exe` installs per user to `%LocalAppData%\Discfolio`, adds Start Menu and Desktop shortcuts, and registers in Installed apps. It does not need administrator rights. Uninstall from Installed apps.
+
+`Discfolio-<version>-macOS-AppleSilicon-Setup.pkg` is the Apple silicon installer. It is unsigned, so Gatekeeper asks before the app opens. `Discfolio-<version>-Linux-x64.AppImage` is the Linux build. Mark it executable, then run it. The AppImage is attached when that pack succeeds.
+
+`SHA256SUMS.txt` is the SHA-256 digest of the files on that release. The same release includes `*-full.nupkg` packages and `releases.*.json` files. Those are what Discfolio's built-in updater downloads.
 
 Discfolio checks those public releases for updates when it starts. That check is on by default and can be turned off under Settings. Check now is there too, along with the channel: stable or prerelease. When an update is available, a notice downloads it in the background. Discfolio restarts only after you choose OK. The public releases need no token.
 
-The Linux AppImage is attached when that pack succeeds. macOS (Apple silicon) is an unsigned setup pkg and a portable zip on the same release. Gatekeeper asks before that app opens. You can also build from source.
+You can also build from source.
 
 ## Browse
 
@@ -117,7 +121,7 @@ dotnet run --project src/EliteLevel.Disc.App
 dotnet run --project src/EliteLevel.Disc.Cli -- info path/to/image.iso
 ```
 
-The Windows portable profile:
+A self-contained Windows publish into `artifacts/win-x64`. This folder is a local build. It is not attached to a release.
 
 ```text
 dotnet publish src/EliteLevel.Disc.App -c Release /p:PublishProfile=win-x64-portable

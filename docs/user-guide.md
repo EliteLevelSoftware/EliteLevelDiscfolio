@@ -24,7 +24,11 @@ PlayStation 3 game data on a physical disc is encrypted. The file list is readab
 
 ## Updates
 
-The installed app checks the public GitHub releases for EliteLevelSoftware/EliteLevelDiscfolio. The check runs on startup unless you turn it off under Settings. Check now uses the same source. The channel is stable or prerelease. Stable is the default.
+Install Discfolio from the GitHub release for EliteLevelSoftware/EliteLevelDiscfolio. The installers are `Discfolio-<version>-Windows-Setup.exe`, `Discfolio-<version>-macOS-AppleSilicon-Setup.pkg`, and `Discfolio-<version>-Linux-x64.AppImage`. `<version>` is the release version, for example `0.6.1`.
+
+The installed app checks those public releases. The check runs on startup unless you turn it off under Settings. Check now uses the same source. The channel is stable or prerelease. Stable is the default.
+
+The check downloads the `*-full.nupkg` package named in `releases.*.json`. Those files are on the release for the updater.
 
 When a newer release is listed, Discfolio shows Update available and downloads it in the background. Choose OK to restart and install it. Not now leaves the download unused. Discfolio does not install an update by itself.
 
