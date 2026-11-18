@@ -49,11 +49,43 @@ jobs:
       - name: Install WiX
         run: dotnet tool install --global wix --version 5.0.2
       - name: Build MSI
-        run: wix build installer/wix/Discfolio.wxs -d PublishDir=artifacts/win-x64 -o artifacts/EliteLevelDiscfolio-0.2.1.msi
+        run: wix build installer/wix/Discfolio.wxs -d PublishDir=artifacts/win-x64 -o artifacts/EliteLevelDiscfolio-0.3.0.msi
       - uses: actions/upload-artifact@v4
         with:
           name: windows-portable
           path: |
             artifacts/win-x64/Discfolio.exe
             artifacts/win-x64/discfolio.exe
-            artifacts/EliteLevelDiscfolio-0.2.1.msi
+            artifacts/EliteLevelDiscfolio-0.3.0.msi
+
+  velopack:
+    name: Velopack pack (no upload)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Publish
+        run: dotnet publish src/EliteLevel.Disc.App/EliteLevel.Disc.App.csproj -c Release -r win-x64 --self-contained true -o artifacts/pack
+      - name: Install vpk
+        shell: pwsh
+        run: |
+          dotnet tool install --global vpk --version 1.2.161
+          "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Append
+      - name: Pack
+        shell: pwsh
+        run: |
+          $version = (([xml](Get-Content -Raw Directory.Build.props)).Project.PropertyGroup.Version | Select-Object -First 1).Trim()
+          New-Item -ItemType Directory -Force artifacts/velopack | Out-Null
+          vpk --yes pack --packId Discfolio --packVersion $version --packDir artifacts/pack --mainExe Discfolio.exe --packTitle "EliteLevel Discfolio" --packAuthors "Elite Level Software" --icon src/EliteLevel.Disc.App/Assets/icon.ico --channel win-x64-stable --shortcuts Desktop,StartMenuRoot --delta None --outputDir artifacts/velopack
+          if ($LASTEXITCODE -ne 0) { throw "vpk pack failed" }
+          $setup = @(Get-ChildItem artifacts/velopack -Filter *Setup.exe)
+          $zip = @(Get-ChildItem artifacts/velopack -Filter *Portable.zip)
+          $full = @(Get-ChildItem artifacts/velopack -Filter *-full.nupkg)
+          Get-ChildItem artifacts/velopack | Select-Object -ExpandProperty Name
+          if ($setup.Count -lt 1 -or $zip.Count -lt 1 -or $full.Count -lt 1) { throw "vpk pack did not produce the setup, portable zip, and full package" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: velopack-dry-run
+          path: artifacts/velopack

@@ -89,6 +89,10 @@ public partial class HeroCard : UserControl
         else if (change.Property == TitleProperty)
         {
             TitleText.Text = Title;
+            var length = Title?.Length ?? 0;
+            TitleText.FontSize = length > 48 ? 28 : length > 32 ? 36 : 48;
+            TitleText.LineHeight = TitleText.FontSize;
+            ToolTip.SetTip(TitleText, string.IsNullOrWhiteSpace(Title) ? null : Title);
         }
         else if (change.Property == EyebrowProperty)
         {

@@ -8,7 +8,8 @@
       <Border Background="{StaticResource ElGrainBrush}" IsHitTestVisible="False"/>
       <Border VerticalAlignment="Bottom" Background="{StaticResource ElGradTileScrim}" Padding="14,40,14,13" IsHitTestVisible="False">
         <StackPanel Spacing="2">
-          <TextBlock x:Name="TitleText" FontSize="14" FontWeight="Bold" LetterSpacing="-0.14" Foreground="#FFF5EC" TextTrimming="CharacterEllipsis"/>
+          <TextBlock x:Name="TitleText" FontSize="14" FontWeight="Bold" LetterSpacing="-0.14" Foreground="#FFF5EC"
+                     TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"/>
           <TextBlock x:Name="MetaText" FontSize="11.5" FontWeight="Medium" Foreground="#CDBFB8" TextTrimming="CharacterEllipsis"/>
         </StackPanel>
       </Border>

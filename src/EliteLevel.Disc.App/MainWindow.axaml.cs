@@ -114,6 +114,25 @@ public partial class MainWindow : EliteLevel.Avalonia.Controls.EliteWindow
         }
     }
 
+    private void OnRemoveFromLibrary(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem item)
+        {
+            return;
+        }
+
+        var path = item.Tag as string;
+        if (string.IsNullOrEmpty(path) && item.Parent is ContextMenu { PlacementTarget: Control target })
+        {
+            path = target.Tag as string;
+        }
+
+        if (!string.IsNullOrEmpty(path))
+        {
+            _ = Model?.RemoveFromLibraryCommand.ExecuteAsync(path);
+        }
+    }
+
     private async void OnCopyHash(object? sender, RoutedEventArgs e)
     {
         if (Model?.HashFull is null)

@@ -1,0 +1,184 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Test
+        run: dotnet test EliteLevelDiscfolio.slnx -c Release --nologo
+
+  windows:
+    name: Windows release
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Version
+        id: version
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          props=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -1 | tr -d '[:space:]')
+          case "$tag" in
+            "$props"|"$props"-*) ;;
+            *) echo "Tag v$tag does not match Directory.Build.props version $props" >&2; exit 1 ;;
+          esac
+          if [[ "$tag" == *-* ]]; then
+            echo "track=prerelease" >> "$GITHUB_OUTPUT"
+          else
+            echo "track=stable" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+      - name: Release notes
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v ver="$version" '
+            $0 == "## " ver { found=1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "CHANGELOG.md has no notes for $version" >&2
+            exit 1
+          fi
+      - name: Publish
+        run: dotnet publish src/EliteLevel.Disc.App/EliteLevel.Disc.App.csproj -c Release -r win-x64 --self-contained true -o artifacts/pack
+      - name: Install vpk
+        shell: pwsh
+        run: |
+          dotnet tool install --global vpk --version 1.2.161
+          "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Append
+      - name: Pack
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = "Continue"
+          $PSNativeCommandUseErrorActionPreference = $false
+          $channel = "win-x64-${{ steps.version.outputs.track }}"
+          $out = "artifacts/velopack"
+          New-Item -ItemType Directory -Force $out | Out-Null
+          $download = @("download","github","--repoUrl","https://github.com/EliteLevelSoftware/EliteLevelDiscfolio","--channel",$channel,"--outputDir",$out,"--token",$env:GITHUB_TOKEN)
+          if ("${{ steps.version.outputs.track }}" -eq "prerelease") { $download += "--pre" }
+          & vpk @download
+          $delta = "None"
+          if ($LASTEXITCODE -eq 0 -and @(Get-ChildItem $out -Filter *-full.nupkg -ErrorAction SilentlyContinue).Count -gt 0) { $delta = "BestSpeed" }
+          & vpk --yes pack --packId Discfolio --packVersion "${{ steps.version.outputs.version }}" --packDir artifacts/pack --mainExe Discfolio.exe --packTitle "EliteLevel Discfolio" --packAuthors "Elite Level Software" --icon src/EliteLevel.Disc.App/Assets/icon.ico --channel $channel --shortcuts Desktop,StartMenuRoot --delta $delta --releaseNotes release-notes.md --outputDir $out
+          if ($LASTEXITCODE -ne 0) { throw "vpk pack failed" }
+          $setup = @(Get-ChildItem $out -Filter *Setup.exe)
+          $zip = @(Get-ChildItem $out -Filter *Portable.zip)
+          $full = @(Get-ChildItem $out -Filter *-full.nupkg)
+          Get-ChildItem $out | Select-Object -ExpandProperty Name
+          if ($setup.Count -lt 1 -or $zip.Count -lt 1 -or $full.Count -lt 1) { throw "vpk pack did not produce the setup, portable zip, and full package" }
+          $lines = foreach ($file in (Get-ChildItem $out -File)) {
+            $hash = (Get-FileHash $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($file.Name)"
+          }
+          Set-Content -Path artifacts/SHA256SUMS.txt -Value $lines -Encoding ascii
+      - name: Upload
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $channel = "win-x64-${{ steps.version.outputs.track }}"
+          $upload = @("upload","github","--outputDir","artifacts/velopack","--channel",$channel,"--repoUrl","https://github.com/EliteLevelSoftware/EliteLevelDiscfolio","--token",$env:GITHUB_TOKEN,"--publish","--releaseName","EliteLevel Discfolio ${{ steps.version.outputs.version }}","--tag","${{ github.ref_name }}")
+          if ("${{ steps.version.outputs.track }}" -eq "prerelease") { $upload += "--pre" }
+          & vpk @upload
+          if ($LASTEXITCODE -ne 0) { throw "vpk upload failed" }
+      - name: Attach checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.ref_name }}" artifacts/SHA256SUMS.txt --clobber
+
+  linux:
+    name: Linux pack
+    needs: windows
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Release notes
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v ver="$version" '
+            $0 == "## " ver { found=1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+      - name: Publish and pack
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y squashfs-tools
+          dotnet publish src/EliteLevel.Disc.App/EliteLevel.Disc.App.csproj -c Release -r linux-x64 --self-contained true -o artifacts/pack
+          dotnet tool install --global vpk --version 1.2.161
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          tag="${GITHUB_REF_NAME#v}"
+          if [[ "$tag" == *-* ]]; then track=prerelease; pre=(--pre); else track=stable; pre=(); fi
+          channel="linux-x64-$track"
+          mkdir -p artifacts/velopack
+          vpk download github --repoUrl https://github.com/EliteLevelSoftware/EliteLevelDiscfolio --channel "$channel" --outputDir artifacts/velopack --token "$GITHUB_TOKEN" "${pre[@]}" || true
+          if compgen -G "artifacts/velopack/*-full.nupkg" > /dev/null; then delta=BestSpeed; else delta=None; fi
+          vpk --yes pack --packId Discfolio --packVersion "$tag" --packDir artifacts/pack --mainExe Discfolio --packTitle "EliteLevel Discfolio" --packAuthors "Elite Level Software" --icon src/EliteLevel.Disc.App/Assets/icon.png --channel "$channel" --delta "$delta" --releaseNotes release-notes.md --outputDir artifacts/velopack
+          vpk upload github --outputDir artifacts/velopack --channel "$channel" --repoUrl https://github.com/EliteLevelSoftware/EliteLevelDiscfolio --token "$GITHUB_TOKEN" --publish --merge --releaseName "EliteLevel Discfolio $tag" --tag "$GITHUB_REF_NAME" "${pre[@]}"
+
+  macos:
+    name: macOS pack
+    needs: windows
+    runs-on: macos-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Release notes
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v ver="$version" '
+            $0 == "## " ver { found=1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+      - name: Publish and pack
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          dotnet publish src/EliteLevel.Disc.App/EliteLevel.Disc.App.csproj -c Release -r osx-arm64 --self-contained true -o artifacts/pack
+          dotnet tool install --global vpk --version 1.2.161
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          tag="${GITHUB_REF_NAME#v}"
+          if [[ "$tag" == *-* ]]; then track=prerelease; pre=(--pre); else track=stable; pre=(); fi
+          channel="osx-arm64-$track"
+          mkdir -p artifacts/velopack
+          vpk download github --repoUrl https://github.com/EliteLevelSoftware/EliteLevelDiscfolio --channel "$channel" --outputDir artifacts/velopack --token "$GITHUB_TOKEN" "${pre[@]}" || true
+          if compgen -G "artifacts/velopack/*-full.nupkg" > /dev/null; then delta=BestSpeed; else delta=None; fi
+          vpk --yes pack --packId Discfolio --packVersion "$tag" --packDir artifacts/pack --mainExe Discfolio --packTitle "EliteLevel Discfolio" --packAuthors "Elite Level Software" --icon src/EliteLevel.Disc.App/Assets/icon.png --channel "$channel" --delta "$delta" --releaseNotes release-notes.md --outputDir artifacts/velopack
+          vpk upload github --outputDir artifacts/velopack --channel "$channel" --repoUrl https://github.com/EliteLevelSoftware/EliteLevelDiscfolio --token "$GITHUB_TOKEN" --publish --merge --releaseName "EliteLevel Discfolio $tag" --tag "$GITHUB_REF_NAME" "${pre[@]}"

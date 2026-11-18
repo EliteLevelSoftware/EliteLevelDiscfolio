@@ -53,6 +53,15 @@ Copyright (c) .NET Foundation and Contributors
 License: MIT
 
 -------------------------------------------------------------------------------
+Velopack
+https://github.com/velopack/velopack
+Copyright (c) Velopack contributors
+License: MIT
+
+Velopack packs the Windows setup program and applies updates the user accepts.
+The public GitHub releases need no token.
+
+-------------------------------------------------------------------------------
 Plus Jakarta Sans
 Copyright 2020 The Plus Jakarta Sans Project Authors (https://github.com/tokotype/PlusJakartaSans)
 License: SIL Open Font License 1.1

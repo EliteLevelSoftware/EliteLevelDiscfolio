@@ -148,7 +148,7 @@
             </Panel>
 
             <Panel IsVisible="{Binding IsLoading}">
-              <Grid ColumnDefinitions="*,322" RowDefinitions="330,*">
+              <Grid ColumnDefinitions="*,322" RowDefinitions="420,*">
                 <Border Classes="skeleton" CornerRadius="26" Margin="0,0,20,0"/>
                 <Border Grid.Column="1" Classes="skeleton" CornerRadius="24"/>
                 <Border Grid.Row="1" Classes="skeleton" CornerRadius="20" Margin="0,22,20,0"/>
@@ -170,7 +170,7 @@
               </Border>
             </Panel>
 
-            <Grid IsVisible="{Binding ShowBrowser}" RowDefinitions="330,*">
+            <Grid IsVisible="{Binding ShowBrowser}" RowDefinitions="420,*">
               <Grid ColumnDefinitions="*,322">
                 <controls:HeroCard Margin="0,0,20,0"
                                    Seed="{Binding ArtSeed}" Icon="{Binding IconPath}" Banner="{Binding BannerPath}"
@@ -185,7 +185,9 @@
                                  FontWeight="Bold" FontSize="12" Foreground="#FFF7EE"/>
                     </Grid>
                     <StackPanel>
-                      <TextBlock Text="{Binding DetailTitle}" FontSize="22" FontWeight="Bold" Foreground="#FFF7EE" TextTrimming="CharacterEllipsis"/>
+                      <TextBlock Text="{Binding DetailTitle}" FontSize="22" FontWeight="Bold" Foreground="#FFF7EE"
+                                 TextWrapping="Wrap" MaxLines="2" LineHeight="28" TextTrimming="CharacterEllipsis"
+                                 ToolTip.Tip="{Binding DetailTitle}"/>
                       <TextBlock Text="{Binding DetailSubtitle}" FontSize="12.5" Foreground="#C7FFF0E4" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
                       <TextBlock Text="{Binding TitleId}" Classes="mono" FontSize="12.5" Foreground="#C7FFF0E4" Margin="0,4,0,14"
                                  IsVisible="{Binding HasTitleId}" TextTrimming="CharacterEllipsis"/>
@@ -200,6 +202,8 @@
                         </Button>
                       </Grid>
                       <TextBlock Text="{Binding SourceName}" Classes="mono" FontSize="11" Foreground="#C7FFF0E4" TextTrimming="CharacterEllipsis"/>
+                      <Button Classes="el-ghost" Content="Remove from library" HorizontalAlignment="Stretch" Margin="0,14,0,0"
+                              Command="{Binding RemoveOpenFromLibraryCommand}"/>
                     </StackPanel>
                   </DockPanel>
                 </controls:FeatureCard>
@@ -208,9 +212,14 @@
                 <DockPanel Margin="0,0,20,0">
                   <Grid DockPanel.Dock="Top" Margin="0,0,0,12" ColumnDefinitions="*,Auto">
                     <TextBlock Text="Recent images" FontSize="17" FontWeight="Bold"/>
-                    <Button Grid.Column="1" Background="Transparent" Command="{Binding ShowPageCommand}" CommandParameter="open">
-                      <TextBlock Text="View library" Foreground="{StaticResource ElText3Brush}" FontSize="13"/>
-                    </Button>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16">
+                      <Button Background="Transparent" Command="{Binding ClearMissingCommand}">
+                        <TextBlock Text="Clear missing" Foreground="{StaticResource ElText3Brush}" FontSize="13"/>
+                      </Button>
+                      <Button Background="Transparent" Command="{Binding ShowPageCommand}" CommandParameter="open">
+                        <TextBlock Text="View library" Foreground="{StaticResource ElText3Brush}" FontSize="13"/>
+                      </Button>
+                    </StackPanel>
                   </Grid>
                   <TextBlock Text="No recent images" Foreground="{StaticResource ElTextMutedBrush}"
                              IsVisible="{Binding !VisibleRecent.Count}"/>
@@ -222,7 +231,12 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:RecentItem">
-                        <Button Classes="el-tile" Margin="0,0,12,0" MinHeight="220" Click="OnRecent" Tag="{Binding Path}">
+                        <Button Classes="el-tile" Margin="0,0,12,0" MinHeight="220" Click="OnRecent" Tag="{Binding Path}" ToolTip.Tip="{Binding Title}">
+                          <Button.ContextMenu>
+                            <ContextMenu>
+                              <MenuItem Header="Remove from library" Click="OnRemoveFromLibrary"/>
+                            </ContextMenu>
+                          </Button.ContextMenu>
                           <controls:MediaTile Seed="{Binding Seed}" Icon="{Binding IconPath}" Title="{Binding Title}" Meta="{Binding Meta}"/>
                         </Button>
                       </DataTemplate>
@@ -269,13 +283,20 @@
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <Button Classes="el-primary" Content="Open image" Click="OnOpenFile"/>
                   <Button Classes="el-secondary" Content="Open folder" Click="OnOpenFolder"/>
+                  <Button Classes="el-secondary" Content="Clear missing" Command="{Binding ClearMissingCommand}"/>
                 </StackPanel>
+                <TextBlock Text="{Binding LibraryMessage}" Foreground="{StaticResource ElTextMutedBrush}" TextWrapping="Wrap"/>
                 <ItemsControl ItemsSource="{Binding VisibleRecent}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:RecentItem">
-                      <Button Classes="el-row" HorizontalAlignment="Stretch" Click="OnRecent" Tag="{Binding Path}" Margin="0,4">
+                      <Button Classes="el-row" HorizontalAlignment="Stretch" Click="OnRecent" Tag="{Binding Path}" Margin="0,4" ToolTip.Tip="{Binding Title}">
+                        <Button.ContextMenu>
+                          <ContextMenu>
+                            <MenuItem Header="Remove from library" Click="OnRemoveFromLibrary"/>
+                          </ContextMenu>
+                        </Button.ContextMenu>
                         <Grid ColumnDefinitions="*,Auto">
-                          <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
+                          <TextBlock Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}"/>
                           <TextBlock Grid.Column="1" Text="{Binding Meta}" Foreground="{StaticResource ElTextMutedBrush}" Margin="16,0,0,0"/>
                         </Grid>
                       </Button>
@@ -331,6 +352,21 @@
                 <CheckBox Content="Show system-update folders" IsChecked="{Binding ShowSystemUpdate}"/>
                 <CheckBox Content="Also compute SHA-1" IsChecked="{Binding HashSha1}"/>
                 <CheckBox Content="Also compute MD5" IsChecked="{Binding HashMd5}"/>
+                <TextBlock Text="Updates" FontSize="17" FontWeight="Bold" Margin="0,8,0,0"/>
+                <CheckBox Content="Check for updates on startup" IsChecked="{Binding CheckUpdatesOnStartup}"/>
+                <TextBlock Text="Channel" Foreground="{StaticResource ElTextMutedBrush}"/>
+                <ComboBox SelectedIndex="{Binding UpdateChannelIndex, Mode=TwoWay}" HorizontalAlignment="Left" MinWidth="200">
+                  <ComboBoxItem Content="Stable"/>
+                  <ComboBoxItem Content="Prerelease"/>
+                </ComboBox>
+                <TextBlock Text="Update source" Foreground="{StaticResource ElTextMutedBrush}"/>
+                <TextBlock Text="Leave this blank. Discfolio then uses the public GitHub releases, and no token is required."
+                           Foreground="{StaticResource ElText2Brush}" TextWrapping="Wrap"/>
+                <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44">
+                  <TextBox Classes="plain" Text="{Binding UpdateSource}" Watermark="https://github.com/EliteLevelSoftware/EliteLevelDiscfolio"/>
+                </Border>
+                <Button Classes="el-primary" Content="Check now" HorizontalAlignment="Left" Command="{Binding CheckForUpdatesNowCommand}"/>
+                <TextBlock Text="{Binding UpdateStatus}" TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"/>
                 <TextBlock Text="Default extract folder" Foreground="{StaticResource ElTextMutedBrush}"/>
                 <Border Background="{StaticResource ElCharcoal800Brush}" CornerRadius="14" Padding="12,0" Height="44">
                   <TextBox Classes="plain" Text="{Binding ExtractDirectory}"/>
@@ -353,6 +389,10 @@
                            Text="Discfolio browses disc images and folder dumps you already have. It is read-only: the source is never modified. It does not include encryption keys or game data. Use it only with copies you are allowed to possess."/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
                            Text="Open an ISO 9660 or Joliet image, an Xbox or Xbox 360 XDVDFS image, or a folder. Nintendo Switch images are not supported yet. Search by name, copy a SHA-256 hash, and extract files to a folder you choose. Protected paths, including a hidden system-update folder, are skipped unless you include them, and even then they are copied unchanged."/>
+                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
+                           Text="Right-click a library tile to remove it. That deletes the entry and its cached art only. The image file stays where it is. Clear missing drops entries whose files are gone."/>
+                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"
+                           Text="Settings can check the public GitHub releases for an update. An available update downloads in the background and is installed only after you choose OK."/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource ElTextMutedBrush}"
                            Text="PlayStation, Xbox and Nintendo are trademarks of their owners. Elite Level Software is not affiliated with them."/>
                 <TextBlock Text="A product of Elite Level" Foreground="{StaticResource ElTextMutedBrush}"/>
@@ -378,6 +418,19 @@
       <Border Height="6" VerticalAlignment="Bottom" Background="Transparent" PointerPressed="OnResizeBottom"/>
       <Border Width="6" HorizontalAlignment="Left" Background="Transparent" PointerPressed="OnResizeLeft"/>
       <Border Width="6" HorizontalAlignment="Right" Margin="0,34,0,0" Background="Transparent" PointerPressed="OnResizeRight"/>
+
+      <Border IsVisible="{Binding UpdateAvailable}" ZIndex="15" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+              Margin="0,0,36,36" MaxWidth="420" Padding="22" CornerRadius="22"
+              Background="{StaticResource ElCharcoal850Brush}" BorderBrush="{StaticResource ElGoldBrush}" BorderThickness="1">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Update available" FontSize="17" FontWeight="Bold"/>
+          <TextBlock Text="{Binding UpdateMessage}" TextWrapping="Wrap" Foreground="{StaticResource ElText2Brush}"/>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Classes="el-primary" Content="OK" Command="{Binding RestartToUpdateCommand}" IsVisible="{Binding UpdateReady}"/>
+            <Button Classes="el-secondary" Content="Not now" Command="{Binding DismissUpdateCommand}"/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
 
       <Panel IsVisible="{Binding ShowWelcome}" ZIndex="20" Background="{StaticResource ElScrimBrush}">
         <Border Background="{StaticResource ElCharcoal850Brush}" CornerRadius="24" Padding="28" Width="520" HorizontalAlignment="Center" VerticalAlignment="Center">

@@ -10,6 +10,18 @@ public sealed class AppSettings
     public bool HashSha1 { get; set; }
     public bool HashMd5 { get; set; }
     public string? ExtractDirectory { get; set; }
+    public bool CheckForUpdates { get; set; } = true;
+    public string UpdateChannel { get; set; } = "stable";
+
+    /// <summary>Blank uses the public GitHub releases. A private feed can set this.</summary>
+    public string? UpdateSource { get; set; }
+
+    /// <summary>
+    /// Optional token for a private feed. The public releases need none.
+    /// An environment variable overrides this. It is never written by the build.
+    /// </summary>
+    public string? UpdateToken { get; set; }
+
     public List<RecentRecord> Recent { get; set; } = [];
 }
 

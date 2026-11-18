@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Fonts.Inter;
+using Velopack;
 
 namespace EliteLevel.Disc.App;
 
@@ -10,6 +11,7 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        VelopackApp.Build().SetAutoApplyOnStartup(false).Run();
         StartupArgs = args;
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }

@@ -4,6 +4,7 @@ obj/
 .idea/
 *.user
 artifacts/
+Releases/
 TestResults/
 *.iso
 *.xiso

@@ -57,6 +57,9 @@ public partial class MediaTile : UserControl
         else if (change.Property == TitleProperty)
         {
             TitleText.Text = Title;
+            var tip = string.IsNullOrWhiteSpace(Title) ? null : Title;
+            ToolTip.SetTip(TitleText, tip);
+            ToolTip.SetTip(this, tip);
         }
         else if (change.Property == MetaProperty)
         {

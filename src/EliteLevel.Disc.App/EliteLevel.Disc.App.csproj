@@ -4,11 +4,13 @@
     <AssemblyName>Discfolio</AssemblyName>
     <RootNamespace>EliteLevel.Disc.App</RootNamespace>
     <ApplicationTitle>EliteLevel Discfolio</ApplicationTitle>
+    <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
     <Description>Read-only explorer for console disc images and folder dumps.</Description>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.23" />
+    <PackageReference Include="Velopack" Version="1.2.161" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.23" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.23" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.23" />

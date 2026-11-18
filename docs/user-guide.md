@@ -16,6 +16,18 @@ PlayStation 3 images and folder dumps are read from `PARAM.SFO` (`TITLE`, `TITLE
 
 The bytes are read in memory. Art and the title are then stored in the Discfolio data folder (the `EliteLevel/Discfolio` folder under the account's application data), keyed by a reader version, path, size and modification time. An entry from an older reader is computed again. Reopening the library uses that cache. Nothing is written next to the image, and the image is not modified.
 
+Right-click a library or recent tile and choose Remove from library, or use the same button on the side card. That removes the entry and deletes its cached art and metadata. The image file is not deleted or changed. Clear missing, on the library and on Open images, removes entries whose file or folder is no longer there. A long title wraps to two lines on the side card, the hero, and the tiles. Point at the title to see the full text.
+
+## Updates
+
+The installed app checks the public GitHub releases for EliteLevelSoftware/EliteLevelDiscfolio. The check runs on startup unless you turn it off under Settings. Check now uses the same source. The channel is stable or prerelease. Stable is the default.
+
+When a newer release is listed, Discfolio shows Update available and downloads it in the background. Choose OK to restart and install it. Not now leaves the download unused. Discfolio does not install an update by itself.
+
+Leave the update source blank. That selects the public releases, and no token is required. A different feed can be pasted there. A private feed can read a token from the `DISCFOLIO_UPDATE_TOKEN` environment variable, or from `UpdateToken` in the local settings file. A public repository does not need either. The build never contains a token.
+
+A copy you start from `dotnet run`, or from a folder that was not installed, has nothing to update. Check now says so.
+
 Extract asks for a destination. Skip files that already match is on by default: an existing file of the same size is left in place and counted as success. Protected paths are listed in the dialog and skipped unless you include them. Included protected files are copied byte for byte and are not decrypted.
 
 ## Command line
@@ -64,4 +76,4 @@ An unrecognized file names only the readers this version has: ISO 9660/Joliet (i
 dotnet test
 ```
 
-Tests build tiny ISO 9660 and XDVDFS images, and tiny PARAM.SFO, PNG, XEX and XBE structures, in a temporary directory. They do not use retail game data. Desktop tests keep settings and the art cache in a temporary directory as well, so a sample image is not added to the library on this machine.
+Tests build tiny ISO 9660 and XDVDFS images, and tiny PARAM.SFO, PNG, XEX and XBE structures, in a temporary directory. They do not use retail game data. Desktop tests keep settings and the art cache in a temporary directory as well, so a sample image is not added to the library on this machine. Library removal is tested the same way: the temporary image file is still there afterwards, and only the temporary cache entry is deleted.

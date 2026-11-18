@@ -6,7 +6,7 @@
     <LangVersion>latest</LangVersion>
     <Deterministic>true</Deterministic>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <Version>0.2.1</Version>
+    <Version>0.3.0</Version>
     <Authors>Elite Level Software</Authors>
     <Company>Elite Level Software</Company>
     <Product>EliteLevel Discfolio</Product>

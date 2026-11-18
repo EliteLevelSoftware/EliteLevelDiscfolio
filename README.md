@@ -18,15 +18,17 @@ A read-only explorer for console disc images and folder dumps.
 
 </div>
 
-## Download
+## Install
 
-Windows portable build (single file, `win-x64`):
+Download the latest release from [GitHub releases](https://github.com/EliteLevelSoftware/EliteLevelDiscfolio/releases).
 
-The installer and portable archive are published with a release. Until then, build from source with the profile in `src/EliteLevel.Disc.App/Properties/PublishProfiles`.
+On Windows, run the setup program. It installs per user to `%LocalAppData%\Discfolio`, adds Start Menu and Desktop shortcuts, and registers in Installed apps. It does not need administrator rights. Uninstall from Installed apps; that removes the program, the shortcuts, and the registry entry. A portable zip is on the same release if you would rather not install.
 
-SHA-256: `0000000000000000000000000000000000000000000000000000000000000000`
+`SHA256SUMS.txt` on the release lists the SHA-256 digest of each file.
 
-Replace that digest with the hash from `SHA256SUMS.txt` when a release is published.
+Discfolio checks those public releases for updates when it starts. That check is on by default and can be turned off under Settings. Check now is there too, along with the channel: stable or prerelease. When an update is available, a notice downloads it in the background. Discfolio restarts only after you choose OK. The public releases need no token.
+
+Linux and macOS packages are attached when that pack succeeds. You can also build from source.
 
 ## Browse
 
@@ -35,6 +37,8 @@ Open an ISO 9660 or Joliet image, an Xbox or Xbox 360 XDVDFS image (plain, XGD1,
 The window shows the title, the file tree, and recent images on this machine. A PlayStation 3 image uses the title and title ID from `PARAM.SFO`, `ICON0.PNG` on the library tile, and `PIC1.PNG` (or `PIC0.PNG`) on the banner. Xbox 360 reads the title and title ID from `default.xex`, including the embedded title image, and `nxeart` when that file is present. Original Xbox reads the certificate and `$$XTIMAGE` section of `default.xbe` when that section holds a PNG or JPEG. Those files are recognised at the image root or up to two folders down. Anything else keeps the volume label. A plain ISO can also use an `autorun.inf` icon when that line points at an image file rather than an executable resource.
 
 Art and the title are cached in the Discfolio data folder, keyed by a reader version, the image path, size and modification time, so the library can show them again without opening the disc. The image itself is not modified. Drag an image onto the window to open it. Search matches file names, the title and the title ID.
+
+Right-click a library tile, or use the side card, to remove that entry. Removal deletes the library entry and its cached art and metadata. It does not delete the image file. Clear missing drops entries whose file is no longer there. A long title wraps to two lines, and the tooltip shows the full text.
 
 ## Extract
 

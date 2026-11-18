@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+- A library entry can be removed from the tile menu or the side card. That deletes the entry and its cached art and metadata. The image file is left in place. Clear missing drops entries whose file is no longer there.
+- Long titles wrap to two lines on the side card, the hero, and the tiles. The full title is on the tooltip.
+- Settings can check for updates on startup, or check now. The channel is stable or prerelease. An update notice downloads in the background and restarts only after you choose OK.
+- Windows releases are packed with Velopack. The setup program installs per user to `%LocalAppData%\Discfolio`, adds Start Menu and Desktop shortcuts, uses the Discfolio icon, and uninstalls from Installed apps. The portable zip, full package, and delta package (when a previous release exists) are published with it. The app reads the public GitHub releases. No token is required.
+
 ## 0.2.1
 
 - Title art is found when `PS3_DISC.SFB`, `PS3_GAME/PARAM.SFO`, `default.xex` or `default.xbe` sits up to two folders below the image root. The shallowest match is used. A PlayStation 3 disc whose game folder is nested under the title name, such as a `POTCAWE` volume, shows that title and its icon instead of the volume label.

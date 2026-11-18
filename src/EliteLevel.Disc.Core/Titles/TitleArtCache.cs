@@ -93,6 +93,7 @@ public sealed class TitleArtCache
                 Banner = banner
             };
             WriteAtomic(Path.Combine(dir, "meta.json"), Encoding.UTF8.GetBytes(JsonSerializer.Serialize(meta, Json)));
+            Remember(imagePath, key);
             return ToCached(dir, meta);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
@@ -100,6 +101,89 @@ public sealed class TitleArtCache
             return memory;
         }
     }
+
+    /// <summary>
+    /// Deletes the cached art and metadata for one image. The image file is not touched.
+    /// </summary>
+    public void Remove(string imagePath)
+    {
+        try
+        {
+            var index = ReadIndex();
+            var name = EntryName(imagePath);
+            string? key = null;
+            if (name is not null && !index.Remove(name, out key))
+            {
+                var match = index.Keys.FirstOrDefault(existing => string.Equals(existing, name, StringComparison.OrdinalIgnoreCase));
+                if (match is not null)
+                {
+                    key = index[match];
+                    index.Remove(match);
+                }
+            }
+
+            key ??= Fingerprint(imagePath);
+            if (key is not null && IsCacheKey(key))
+            {
+                var dir = Path.Combine(_directory, key);
+                if (Directory.Exists(dir))
+                {
+                    Directory.Delete(dir, recursive: true);
+                }
+            }
+
+            WriteIndex(index);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or JsonException)
+        {
+        }
+    }
+
+    private void Remember(string imagePath, string key)
+    {
+        var name = EntryName(imagePath);
+        if (name is null || !IsCacheKey(key))
+        {
+            return;
+        }
+
+        var index = ReadIndex();
+        index[name] = key;
+        WriteIndex(index);
+    }
+
+    private Dictionary<string, string> ReadIndex()
+    {
+        try
+        {
+            var path = Path.Combine(_directory, "index.json");
+            if (!File.Exists(path))
+            {
+                return new Dictionary<string, string>(PathComparer);
+            }
+
+            var map = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path), Json);
+            return map is null
+                ? new Dictionary<string, string>(PathComparer)
+                : new Dictionary<string, string>(map, PathComparer);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException or NotSupportedException)
+        {
+            return new Dictionary<string, string>(PathComparer);
+        }
+    }
+
+    private void WriteIndex(Dictionary<string, string> index)
+    {
+        Directory.CreateDirectory(_directory);
+        WriteAtomic(Path.Combine(_directory, "index.json"), Encoding.UTF8.GetBytes(JsonSerializer.Serialize(index, Json)));
+    }
+
+    private static StringComparer PathComparer =>
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+
+    private static bool IsCacheKey(string? key) =>
+        key is { Length: 64 } && key.All(static c => c is >= '0' and <= '9' or >= 'a' and <= 'f');
 
     private static CachedTitle ToCached(string dir, CacheMeta meta) => new()
     {
@@ -147,9 +231,31 @@ public sealed class TitleArtCache
         File.Move(temporary, path, overwrite: true);
     }
 
+    private static string? EntryName(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                return new FileInfo(path).FullName;
+            }
+
+            if (Directory.Exists(path))
+            {
+                return new DirectoryInfo(path).FullName;
+            }
+
+            return Path.GetFullPath(path);
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException or NotSupportedException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
     private static string? Fingerprint(string path)
     {
-        string full;
+        string? full;
         long length;
         long ticks;
         if (File.Exists(path))

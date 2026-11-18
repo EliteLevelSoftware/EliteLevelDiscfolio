@@ -3,6 +3,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using EliteLevel.Disc.App.Services;
 using EliteLevel.Disc.Core;
+using Velopack;
+using Velopack.Exceptions;
 using EliteLevel.Disc.Core.Extract;
 using EliteLevel.Disc.Core.Hash;
 using EliteLevel.Disc.Core.IO;
@@ -15,6 +17,13 @@ public partial class MainViewModel : ObservableObject
 {
     private readonly AppSettings _settings;
     private readonly TitleArtCache _cache;
+    private readonly SynchronizationContext? _ui = SynchronizationContext.Current;
+    private readonly object _updateSync = new();
+    private UpdateManager? _updates;
+    private VelopackAsset? _pendingUpdate;
+    private CancellationTokenSource? _updateCancel;
+    private int _updateBusy;
+    private string? _openPath;
     private IDiscImage? _image;
     private readonly Dictionary<string, IDiscNode> _index = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _expanded = new(StringComparer.OrdinalIgnoreCase);
@@ -28,6 +37,9 @@ public partial class MainViewModel : ObservableObject
         ShowSystemUpdate = _settings.ShowSystemUpdate;
         HashSha1 = _settings.HashSha1;
         HashMd5 = _settings.HashMd5;
+        CheckUpdatesOnStartup = _settings.CheckForUpdates;
+        UpdateChannel = _settings.UpdateChannel == "prerelease" ? "prerelease" : "stable";
+        UpdateSource = _settings.UpdateSource ?? "";
         ExtractDirectory = _settings.ExtractDirectory ?? "";
         SkipExisting = true;
         _cache = new TitleArtCache(SettingsStore.CacheDirectory);
@@ -110,6 +122,20 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string platformTag = "";
     [ObservableProperty] private string sourceName = "";
     [ObservableProperty] private bool hasNotification;
+    [ObservableProperty] private bool checkUpdatesOnStartup;
+    [ObservableProperty] private string updateChannel = "stable";
+    [ObservableProperty] private string updateSource = "";
+    [ObservableProperty] private string updateStatus = "";
+    [ObservableProperty] private bool updateAvailable;
+    [ObservableProperty] private bool updateReady;
+    [ObservableProperty] private string updateMessage = "";
+    [ObservableProperty] private string libraryMessage = "";
+
+    public int UpdateChannelIndex
+    {
+        get => UpdateChannel == "prerelease" ? 1 : 0;
+        set => UpdateChannel = value == 1 ? "prerelease" : "stable";
+    }
 
     public bool HasTitleId => !string.IsNullOrWhiteSpace(TitleId);
 
@@ -130,6 +156,11 @@ public partial class MainViewModel : ObservableObject
         if (!_settings.WelcomeSeen)
         {
             ShowWelcome = true;
+        }
+
+        if (_settings.CheckForUpdates)
+        {
+            _ = CheckForUpdatesAsync(startup: true);
         }
     }
 
@@ -239,6 +270,7 @@ public partial class MainViewModel : ObservableObject
             }
 
             _image = next;
+            _openPath = path;
             _expanded.Clear();
             SelectedPath = null;
             HashFull = null;
@@ -430,6 +462,27 @@ public partial class MainViewModel : ObservableObject
         Persist();
     }
 
+    partial void OnCheckUpdatesOnStartupChanged(bool value)
+    {
+        _settings.CheckForUpdates = value;
+        Persist();
+    }
+
+    partial void OnUpdateChannelChanged(string value)
+    {
+        _settings.UpdateChannel = value == "prerelease" ? "prerelease" : "stable";
+        Persist();
+        OnPropertyChanged(nameof(UpdateChannelIndex));
+    }
+
+    partial void OnUpdateSourceChanged(string value)
+    {
+        _settings.UpdateSource = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        Persist();
+    }
+
+    partial void OnUpdateReadyChanged(bool value) => RestartToUpdateCommand.NotifyCanExecuteChanged();
+
     private void ApplyIdentity(ImageIdentity identity, string path, TitleMetadata metadata, CachedTitle cached)
     {
         var found = TitleMetadataReader.ReadTitle(metadata);
@@ -569,9 +622,10 @@ public partial class MainViewModel : ObservableObject
     {
         var title = VolumeTitle;
         var meta = (identity.Platform ?? identity.FormatDisplayName) + "  ·  " + ByteSize.Format(identity.TotalBytes);
+        var full = FullPath(path);
         for (var i = Recent.Count - 1; i >= 0; i--)
         {
-            if (string.Equals(Recent[i].Path, path, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(FullPath(Recent[i].Path), full, StringComparison.OrdinalIgnoreCase))
             {
                 Recent.RemoveAt(i);
             }
@@ -584,6 +638,238 @@ public partial class MainViewModel : ObservableObject
             Recent.RemoveAt(Recent.Count - 1);
         }
 
+        SaveRecent();
+    }
+
+    [RelayCommand]
+    private async Task RemoveFromLibrary(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        var full = FullPath(path);
+        if (_openPath is not null && string.Equals(FullPath(_openPath), full, StringComparison.OrdinalIgnoreCase))
+        {
+            await ClearImageAsync().ConfigureAwait(true);
+        }
+
+        _cache.Remove(path);
+        for (var i = Recent.Count - 1; i >= 0; i--)
+        {
+            if (string.Equals(FullPath(Recent[i].Path), full, StringComparison.OrdinalIgnoreCase))
+            {
+                Recent.RemoveAt(i);
+            }
+        }
+
+        LibraryMessage = "";
+        SaveRecent();
+    }
+
+    [RelayCommand]
+    private Task RemoveOpenFromLibrary() => RemoveFromLibrary(_openPath);
+
+    [RelayCommand]
+    private async Task ClearMissing()
+    {
+        var missing = Recent.Where(item => !PathExists(item.Path)).Select(item => item.Path).ToList();
+        foreach (var path in missing)
+        {
+            await RemoveFromLibrary(path).ConfigureAwait(true);
+        }
+
+        LibraryMessage = missing.Count == 0
+            ? "No missing images."
+            : "Removed " + missing.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + (missing.Count == 1 ? " missing image." : " missing images.");
+    }
+
+    [RelayCommand]
+    private Task CheckForUpdatesNow() => CheckForUpdatesAsync(startup: false);
+
+    private bool CanRestartToUpdate() => UpdateReady;
+
+    [RelayCommand(CanExecute = nameof(CanRestartToUpdate))]
+    private void RestartToUpdate()
+    {
+        UpdateManager? manager;
+        VelopackAsset? asset;
+        lock (_updateSync)
+        {
+            manager = _updates;
+            asset = _pendingUpdate;
+        }
+
+        if (manager is null || asset is null || !UpdateReady)
+        {
+            return;
+        }
+
+        manager.ApplyUpdatesAndRestart(asset);
+    }
+
+    [RelayCommand]
+    private void DismissUpdate()
+    {
+        lock (_updateSync)
+        {
+            _updateCancel?.Cancel();
+        }
+
+        UpdateAvailable = false;
+    }
+
+    private async Task CheckForUpdatesAsync(bool startup)
+    {
+        if (Interlocked.Exchange(ref _updateBusy, 1) == 1)
+        {
+            return;
+        }
+
+        var cancel = new CancellationTokenSource();
+        lock (_updateSync)
+        {
+            _updateCancel?.Cancel();
+            _updateCancel = cancel;
+        }
+
+        try
+        {
+            if (!startup)
+            {
+                UpdateStatus = "Checking for updates.";
+            }
+
+            UpdateManager manager;
+            try
+            {
+                manager = UpdateFeed.CreateManager(_settings);
+            }
+            catch (InvalidOperationException)
+            {
+                if (!startup)
+                {
+                    UpdateStatus = "Updates apply to the installed app.";
+                }
+
+                return;
+            }
+
+            lock (_updateSync)
+            {
+                _updates = manager;
+            }
+
+            if (!manager.IsInstalled)
+            {
+                if (!startup)
+                {
+                    UpdateStatus = "Updates apply to the installed app.";
+                }
+
+                return;
+            }
+
+            var pending = manager.UpdatePendingRestart;
+            var info = await manager.CheckForUpdatesAsync().ConfigureAwait(true);
+            if (cancel.IsCancellationRequested)
+            {
+                return;
+            }
+
+            if (info is null)
+            {
+                if (pending is not null)
+                {
+                    ShowReady(pending);
+                }
+                else if (!startup)
+                {
+                    UpdateStatus = "Discfolio is up to date.";
+                }
+
+                return;
+            }
+
+            if (pending is not null && pending.Version == info.TargetFullRelease.Version)
+            {
+                ShowReady(pending);
+                return;
+            }
+
+            var version = info.TargetFullRelease.Version.ToString();
+            OnUi(() =>
+            {
+                UpdateAvailable = true;
+                UpdateReady = false;
+                UpdateMessage = "Version " + version + " is downloading.";
+                UpdateStatus = "Update available.";
+            });
+            await manager.DownloadUpdatesAsync(
+                info,
+                progress => OnUi(() => UpdateMessage = "Version " + version + " is downloading (" + progress.ToString(System.Globalization.CultureInfo.InvariantCulture) + "%)."),
+                cancel.Token).ConfigureAwait(true);
+            if (cancel.IsCancellationRequested)
+            {
+                return;
+            }
+
+            ShowReady(info.TargetFullRelease);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex) when (ex is NotInstalledException)
+        {
+            if (!startup && !cancel.IsCancellationRequested)
+            {
+                OnUi(() => UpdateStatus = "Updates apply to the installed app.");
+            }
+        }
+        catch (Exception ex)
+        {
+            if (!startup && !cancel.IsCancellationRequested)
+            {
+                var detail = UpdateFeed.PublicError(ex, UpdateFeed.ResolveToken(_settings.UpdateToken));
+                OnUi(() => UpdateStatus = detail.Length == 0 ? "The update check failed." : "The update check failed. " + detail);
+            }
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _updateBusy, 0);
+        }
+    }
+
+    private void ShowReady(VelopackAsset asset)
+    {
+        lock (_updateSync)
+        {
+            _pendingUpdate = asset;
+        }
+
+        OnUi(() =>
+        {
+            UpdateAvailable = true;
+            UpdateReady = true;
+            UpdateMessage = "Version " + asset.Version + " is ready. Restart Discfolio to install it.";
+            UpdateStatus = "Update available.";
+        });
+    }
+
+    private void OnUi(Action action)
+    {
+        if (_ui is null || ReferenceEquals(SynchronizationContext.Current, _ui))
+        {
+            action();
+            return;
+        }
+
+        _ui.Post(_ => action(), null);
+    }
+
+    private void SaveRecent()
+    {
         OpenCount = Recent.Count;
         _settings.Recent = Recent.Select(item => new RecentRecord
         {
@@ -594,6 +880,30 @@ public partial class MainViewModel : ObservableObject
         }).ToList();
         Persist();
         RebuildVisibleRecent();
+    }
+
+    private static bool PathExists(string path)
+    {
+        try
+        {
+            return File.Exists(path) || Directory.Exists(path);
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException or NotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    private static string FullPath(string path)
+    {
+        try
+        {
+            return Path.GetFullPath(path);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or IOException)
+        {
+            return path;
+        }
     }
 
     private void RebuildVisibleRecent()
@@ -628,7 +938,7 @@ public partial class MainViewModel : ObservableObject
         var version = typeof(MainViewModel).Assembly.GetName().Version;
         if (version is null)
         {
-            return "0.2.1";
+            return "0.3.0";
         }
 
         return string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{version.Major}.{version.Minor}.{Math.Max(version.Build, 0)}");
@@ -637,6 +947,9 @@ public partial class MainViewModel : ObservableObject
     private async Task ClearImageAsync()
     {
         HasImage = false;
+        _openPath = null;
+        IconPath = null;
+        BannerPath = null;
         if (_image is not null)
         {
             await _image.DisposeAsync().ConfigureAwait(true);

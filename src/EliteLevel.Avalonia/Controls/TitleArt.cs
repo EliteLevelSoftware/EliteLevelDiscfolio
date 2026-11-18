@@ -27,7 +27,8 @@ public static class TitleArt
 
         try
         {
-            var bitmap = new Bitmap(path);
+            using var stream = new MemoryStream(File.ReadAllBytes(path));
+            var bitmap = new Bitmap(stream);
             Cache[key] = bitmap;
             return bitmap;
         }
